@@ -3,7 +3,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>0.5.2</Version>
+    <Version>0.5.3</Version>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -25,7 +25,7 @@
     <EmbeddedResource Include="../../backend/live_motion.py" LogicalName="runtime/backend/live_motion.py" />
     <EmbeddedResource Include="../../backend/live_landmarks.py" LogicalName="runtime/backend/live_landmarks.py" />
     <EmbeddedResource Include="../../backend/live_bootstrap.py" LogicalName="runtime/backend/live_bootstrap.py" />
-    <EmbeddedResource Include="../../vendor/liveportrait/src/**/*.py" LogicalName="runtime/vendor/liveportrait/src/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../vendor/liveportrait/src/**/*" Exclude="../../vendor/liveportrait/src/**/__pycache__/**;../../vendor/liveportrait/src/**/*.pyc" LogicalName="runtime/vendor/liveportrait/src/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="../../vendor/liveportrait/LICENSE" LogicalName="runtime/vendor/liveportrait/LICENSE" />
   </ItemGroup>
 </Project>

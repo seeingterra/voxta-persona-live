@@ -117,6 +117,8 @@ def test_live_view_package_embeds_only_the_live_renderer():
     build = (Path(__file__).parents[1] / "scripts" / "Build-VoxtaModule.ps1").read_text(encoding="utf-8")
     project = (Path(__file__).parents[1] / "module" / "Voxta.Modules.LiveView" / "Voxta.Modules.LiveView.csproj").read_text(encoding="utf-8")
     assert 'LogicalName="runtime/backend/live_bootstrap.py"' in project
+    assert 'Include="../../vendor/liveportrait/src/**/*"' in project
+    assert 'LogicalName="runtime/vendor/liveportrait/src/%(RecursiveDir)%(Filename)%(Extension)"' in project
     assert "portrait_worker.py" not in project
     assert "../../backend/models.py" not in project
     assert "Copy-Item -LiteralPath (Join-Path $workspace 'module\\Voxta.Modules.LiveView\\bin\\Release\\net10.0\\Voxta.Modules.LiveView.dll')" in build
