@@ -80,9 +80,12 @@ public sealed class LiveViewStartup(RendererHost renderer) : IStartupFilter
                 if(name=="adapter.json")
                 {
                     var assets=Path.Combine(renderer.Root,"wwwroot","assets");
-                    var chat=File.ReadAllText(Directory.GetFiles(assets,"ChatPage-*.js").OrderDescending().First());
+                    var chatFile=Directory.GetFiles(assets,"ChatPage-*.js").OrderByDescending(Path.GetFileName,StringComparer.Ordinal).FirstOrDefault()
+                        ?? throw new InvalidOperationException("Voxta chat assets were not found.");
+                    var chat=File.ReadAllText(chatFile);
                     string Match(string pattern) {var match=Regex.Match(chat,pattern);return match.Success ? "/assets/"+match.Groups[1].Value : throw new InvalidOperationException("This Voxta version requires an updated Live View UI adapter.");}
-                    await c.Response.WriteAsJsonAsync(new {store=Match(@"\./(store-[^""\s]+\.js)"),audio=Match(@"\./(AudioPlaybackService-[^""\s]+\.js)"),chatExport="n",audioStoreExport="N",messagesExport="s",audioExport="n"}); return;
+                    var notifications=Directory.GetFiles(assets,"ui-store-*.js").OrderByDescending(Path.GetFileName,StringComparer.Ordinal).FirstOrDefault();
+                    await c.Response.WriteAsJsonAsync(new {store=Match(@"\./(store-[^""\s]+\.js)"),audio=Match(@"\./(AudioPlaybackService-[^""\s]+\.js)"),notifications=notifications is null ? null : "/assets/"+Path.GetFileName(notifications)}); return;
                 }
                 if(name is not ("live-view.js" or "live-view.css")){c.Response.StatusCode=404;return;}
                 c.Response.ContentType=name.EndsWith(".js")?"text/javascript":"text/css";
@@ -90,10 +93,21 @@ public sealed class LiveViewStartup(RendererHost renderer) : IStartupFilter
                 await stream.CopyToAsync(c.Response.Body,c.RequestAborted);return;
             }
             var live=Regex.IsMatch(path,@"^/api/voxta/live/[a-f0-9]{32}$");
-            var allowed=path is "/api/session" or "/api/voxta/status" or "/api/voxta/native-reference" || Regex.IsMatch(path,@"^/api/voxta/matte/[a-f0-9]{32}$");
+            var allowed=path is "/api/session" or "/api/voxta/status" or "/api/voxta/native-reference" or "/api/voxta/install" or "/api/voxta/install-status" || Regex.IsMatch(path,@"^/api/voxta/matte/[a-f0-9]{32}$");
             if(!live && !allowed){c.Response.StatusCode=404;return;}
             if(c.Request.ContentLength>36*1024*1024){c.Response.StatusCode=413;return;}
             if(c.Request.Method is not ("GET" or "POST")){c.Response.StatusCode=405;return;}
+            if(path=="/api/voxta/install")
+            {
+                if(c.Request.Method!="POST"){c.Response.StatusCode=405;return;}
+                await renderer.PrepareAsync(c.RequestAborted);
+                await c.Response.WriteAsJsonAsync(new {ready=true});return;
+            }
+            if(path=="/api/voxta/install-status")
+            {
+                if(c.Request.Method!="GET"){c.Response.StatusCode=405;return;}
+                await c.Response.WriteAsJsonAsync(new {ready=renderer.IsPrepared});return;
+            }
             await renderer.EnsureStartedAsync(c.RequestAborted);
             if(live)
             {

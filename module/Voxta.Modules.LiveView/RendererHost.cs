@@ -22,6 +22,7 @@ public sealed class RendererHost : IAsyncDisposable
     public string ContentRoot => Path.Combine(Root,"Data","LiveView");
     public string Token { get; } = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     public bool Enabled => settings!=null;
+    public bool IsPrepared => File.Exists(Path.Combine(Root,"Data","Python","modules","PersonaLiveView","bootstrap.json"));
     public string Origin => settings?.VoxtaUrl.TrimEnd('/') ?? "http://localhost:5384";
     public int Port => settings?.Port ?? 8766;
     public RendererHost(IHostApplicationLifetime lifetime, ILogger<RendererHost> log)
@@ -53,7 +54,7 @@ public sealed class RendererHost : IAsyncDisposable
             var config=settings ?? throw new InvalidOperationException("Enable Persona Live View in Voxta Services.");
             if(sessions.IsEmpty)throw new InvalidOperationException("Select Live view in chat augmentations and start the chat. If Voxta cannot start it, resolve the chat error first.");
             if(process is {HasExited:false})return;
-            var python=ResolvePython(config.Python);
+            var python=ResolvePython();
             if(!File.Exists(python))throw new FileNotFoundException("Voxta's managed Python was not found. Reinstall or repair Voxta, then restart Persona Live View.");
             await ExtractRuntimePayloadAsync(cancellation);
             await PrepareRuntimeAsync(python,cancellation);
@@ -96,28 +97,30 @@ public sealed class RendererHost : IAsyncDisposable
         catch { Kill(); throw; }
         finally { gate.Release(); }
     }
-    private string ResolvePython(string configured)
+    public async Task PrepareAsync(CancellationToken cancellation)
     {
-        var selected=Path.GetFullPath(configured,Root);
-        if(File.Exists(selected))return selected;
-        var defaultManagedPython=Path.Combine(Root,"Data","Python","python-3.13.13-amd64","python.exe");
-        var legacyRuntime=Path.Combine(Root,"Data","LiveView","runtime","Scripts","python.exe");
-        if(string.Equals(selected,defaultManagedPython,StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(selected,legacyRuntime,StringComparison.OrdinalIgnoreCase))
+        await gate.WaitAsync(cancellation);
+        try
         {
-            var pythonRoot=Path.Combine(Root,"Data","Python");
-            var managed=Directory.Exists(pythonRoot)
-                ? Directory.EnumerateDirectories(pythonRoot,"python-*-amd64")
-                    .Select(folder=>Path.Combine(folder,"python.exe"))
-                    .FirstOrDefault(File.Exists)
-                : null;
-            if(managed is not null)
-            {
-                logger.LogInformation("Using Voxta managed Python at {Python}.",managed);
-                return managed;
-            }
+            var python=ResolvePython();
+            if(!File.Exists(python))throw new FileNotFoundException("Voxta's managed Python was not found. Reinstall or repair Voxta, then restart Persona Live View.");
+            await ExtractRuntimePayloadAsync(cancellation);
+            await PrepareRuntimeAsync(python,cancellation);
         }
-        return selected;
+        finally { gate.Release(); }
+    }
+    private string ResolvePython()
+    {
+        var pythonRoot=Path.Combine(Root,"Data","Python");
+        var managed=Directory.Exists(pythonRoot)
+            ? Directory.EnumerateDirectories(pythonRoot,"python-*-amd64")
+                .OrderByDescending(folder=>folder,StringComparer.OrdinalIgnoreCase)
+                .Select(folder=>Path.Combine(folder,"python.exe"))
+                .FirstOrDefault(File.Exists)
+            : null;
+        if(managed is null) return Path.Combine(pythonRoot,"python.exe");
+        logger.LogInformation("Using Voxta managed Python at {Python}.",managed);
+        return managed;
     }
     private async Task ExtractRuntimePayloadAsync(CancellationToken cancellation)
     {

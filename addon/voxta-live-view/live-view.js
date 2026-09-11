@@ -3,12 +3,13 @@
   if(window.__personaLiveView)return;
   const BASE=new URL(import.meta.url).pathname.startsWith('/persona-live-view/')?location.origin+'/persona-live-view':'http://127.0.0.1:8765',root=BASE+'/api/voxta/addon/';
   const config=await fetch(root+'adapter.json').then(r=>r.json());
-  const exports=await import(location.origin+config.store),audioExports=await import(location.origin+config.audio).catch(()=>({}));
-  const store=exports[config.chatExport];
-  const audio=()=>audioExports[config.audioExport]?.();
+  const exports=await import(location.origin+config.store),audioExports=await import(location.origin+config.audio).catch(()=>({})),notificationExports=config.notifications?await import(location.origin+config.notifications).catch(()=>({})):{};
+  const store=Object.values(exports).find(value=>typeof value?.getAvatarUrl==='function'&&typeof value?.chat==='function');
+  const audio=()=>Object.values(audioExports).find(value=>{try{return typeof value==='function'&&typeof value()?.getAnalyser==='function';}catch{return false;}})?.();
+  const notifier=Object.values(notificationExports).find(value=>typeof value?.notify==='function');
   if(typeof store?.getAvatarUrl!=='function'||typeof store?.chat!=='function')throw Error('Voxta Live View adapter needs updating for this Voxta version.');
   const style=document.createElement('link');style.rel='stylesheet';style.crossOrigin='anonymous';style.href=root+'live-view.css';document.head.append(style);
-  let enabled=false,ws=null,host=null,layer=null,canvas=null,token='',selected='',imageId='',loading='',generation=0,decoding=false,analyser=null,audioSamples=null,header=null,lastImage='',oldFrame=null,blendAt=0,frames=0,lastTime=performance.now(),fps=0;
+  let enabled=false,ws=null,host=null,layer=null,canvas=null,token='',selected='',imageId='',loading='',generation=0,decoding=false,analyser=null,audioSamples=null,header=null,lastImage='',oldFrame=null,blendAt=0,frames=0,lastTime=performance.now(),fps=0,installed=false;
   const masks=new Map();const cache=new Map(),gaze=[0,0],head=[0,0,0];let motion=null,motionKey='',motionStart=0;
   const bar=document.createElement('div');bar.id='persona-live-controls';
   const title=document.createElement('div');title.className='persona-live-title';title.textContent='Persona Live View';
@@ -43,7 +44,8 @@
   let awaitingFull=false,frameBuffer=null,paintRequest=0;
   let starting=false,paused=false,chatKey='',active=false,checking=false,lastCheck=0;
   const native=BASE.startsWith(location.origin+'/persona-live-view');
-  const state={version:'0.4.1',enabled:false,preparing:false,frames:0,fps:0,source:'',error:'',audioLevel:0};window.__personaLiveView=state;
+  const state={version:'0.5.1',enabled:false,preparing:false,frames:0,fps:0,source:'',error:'',audioLevel:0};window.__personaLiveView=state;
+  function notify(level,message,details,tag){notifier?.notify({level,message,details,tag});}
   async function api(path,body){if(!token){const response=await fetch(BASE+'/api/session');const value=await response.json().catch(()=>({}));if(!response.ok)throw Error(value.detail||'Live View could not start. Check its settings in Voxta Services.');token=value.token;}
     const r=await fetch(BASE+'/api/voxta/'+path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json','X-Persona-Token':token}:{},body:body?JSON.stringify(body):undefined});if(!r.ok){const e=await r.json().catch(()=>({}));throw Error(e.detail||'Live View renderer unavailable.');}return r.json();}
   function updateDisplayToggle(){
@@ -76,7 +78,8 @@
     if(oldFrame&&t<1)paintRequest=requestAnimationFrame(paint);else oldFrame=null;
   }
   const life=new AbortController();
-  async function start(){if(enabled||starting||!active)return;starting=true;state.preparing=true;state.error='';const epoch=generation;toggle.textContent='Cancel animation';status.textContent='Starting animation…';try{await api('status');if(epoch!==generation)return;enabled=true;state.enabled=true;toggle.textContent='Pause animation';toggle.setAttribute('aria-pressed','true');status.textContent='Preparing character image…';frames=0;lastTime=performance.now();updateDisplayToggle();
+  async function install(){if(installed)return;status.textContent='Installing Live View…';const response=await fetch(BASE+'/api/voxta/install',{method:'POST'}),value=await response.json().catch(()=>({}));if(!response.ok)throw Error(value.detail||'Live View installation failed. Check Voxta Services and try again.');installed=true;}
+  async function start(){if(enabled||starting||!active)return;starting=true;state.preparing=true;state.error='';const epoch=generation;toggle.textContent='Cancel animation';status.textContent='Starting animation…';try{await install();if(epoch!==generation)return;await api('status');if(epoch!==generation)return;enabled=true;state.enabled=true;toggle.textContent='Pause animation';toggle.setAttribute('aria-pressed','true');status.textContent='Preparing character image…';frames=0;lastTime=performance.now();updateDisplayToggle();
     // Reading Voxta's analyser must never block animation or change voice settings.
     try{void Promise.resolve(audio()?.getAnalyser?.()).then(value=>{if(epoch===generation){analyser=value;audioSamples=null;}}).catch(()=>{});}catch{}
   }catch(e){if(epoch===generation)fail(e);}finally{if(epoch===generation){starting=false;state.preparing=false;}}}
@@ -84,6 +87,7 @@
   function toggleFromDisplay(){if(!active)return;if(enabled||starting){paused=true;stop();return;}paused=false;void start();}
   displayToggle.onclick=toggleFromDisplay;
   displayToggle.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleFromDisplay();}};
+  fetch(BASE+'/api/voxta/install-status').then(response=>response.ok?response.json():null).then(value=>{if(value&&!value.ready)notify('info','Persona Live View is ready to install','Open a chat with Live view enabled, then select Start animation. The one-time setup downloads module dependencies and licensed model files.','persona-live-view-install');}).catch(()=>{});
   function sourceIn(target){const candidates=[...target.querySelectorAll('[style*="background-image"]')].filter(e=>!e.className.includes('fade-out'));
     const child=candidates.at(-1)||target;const match=child.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);return match?.[1]||target.querySelector('video')?.currentSrc||'';}
   function characterState(){const id=store.speakingMessageId(),generating=store.generating();const label=decodeURIComponent(selected).toLowerCase();const map={angry:'angry',happy:'warm',smile:'warm',excited:'excited',sad:'sad',surpris:'surprised',fear:'afraid',disgust:'disgusted',calm:'calm'};const mood=Object.keys(map).find(k=>label.includes(k));return {emotion:mood?map[mood]:'neutral',state:id?'speaking':generating?'thinking':label.includes('listening')?'listening':'idle'};}

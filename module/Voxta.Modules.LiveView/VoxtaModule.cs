@@ -19,11 +19,10 @@ public class VoxtaModule : IVoxtaModule
             Supports = new() { ChatAugmentations = new(ServiceDefinitionCategoryScore.High) },
             Augmentations = [new("persona_live_view", "Live view", "Local animated character inside the chat stage.")],
             ModuleConfigurationProviderType = typeof(LiveViewConfiguration),
-            ModuleConfigurationFieldsRequiringReload = ["PythonPath", "Device", "FrameRate", "RendererPort", "VoxtaUrl"]
+            ModuleConfigurationFieldsRequiringReload = ["Device", "FrameRate", "RendererPort", "VoxtaUrl"]
         });
         builder.AddChatAugmentationsService<LiveViewService>("PersonaLiveView");
         builder.Services.AddSingleton<RendererHost>();
         builder.Services.AddTransient<IStartupFilter, LiveViewStartup>();
     }
 }
-

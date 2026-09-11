@@ -31,14 +31,18 @@ try
     Check((await response.Content.ReadAsStringAsync()).Contains("/persona-live-view/api/voxta/addon/live-view.js"),"SPA bootstrap injected without editing web files");
     var js=await client.GetStringAsync("/persona-live-view/api/voxta/addon/live-view.js");
     Check(js.Contains("location.origin+'/persona-live-view'"),"browser uses same-origin module routes");
-    Check((await client.GetStringAsync("/persona-live-view/api/voxta/addon/adapter.json")).Contains("store-"),"adapter resolves installed Voxta assets");
+    using(var adapter=await client.GetAsync("/persona-live-view/api/voxta/addon/adapter.json"))
+    {
+        var adapterBody=await adapter.Content.ReadAsStringAsync();
+        Check(adapter.IsSuccessStatusCode && adapterBody.Contains("store-"),"adapter resolves installed Voxta assets: "+adapterBody);
+    }
     using var hostile=new HttpRequestMessage(HttpMethod.Post,"/persona-live-view/api/voxta/native-reference");
     hostile.Headers.Add("Origin","https://example.com");
     Check((await client.SendAsync(hostile)).StatusCode==HttpStatusCode.Forbidden,"cross-origin requests rejected");
     Check((await client.GetAsync("/persona-live-view/api/voxta/characters")).StatusCode==HttpStatusCode.NotFound,"standalone API unavailable");
     Check((await client.GetAsync("/persona-live-view/api/session")).StatusCode==HttpStatusCode.ServiceUnavailable,"disabled module does not start renderer");
     var render=args.Contains("--render");
-    renderer.Configure(new("Data/LiveView/runtime/Scripts/python.exe",render?"auto":"cpu",5,18766,"http://localhost:5384"));
+    renderer.Configure(new(render?"auto":"cpu",5,18766,"http://localhost:5384"));
     Check((await client.GetAsync("/persona-live-view/api/session")).StatusCode==HttpStatusCode.ServiceUnavailable,"renderer requires active chat augmentation");
     var sessionId=Guid.NewGuid();
     Check((await client.GetStringAsync($"/persona-live-view/api/voxta/module-state?sessionId={sessionId}")).Contains("\"active\":false"),"unselected chat reports inactive without loading models");

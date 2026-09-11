@@ -150,3 +150,9 @@ RTX 4080: 16,376 MiB. RTX 3070: 8,192 MiB. RAM: 64 GiB. Separate workload placem
 - On first Live View activation, the module extracts its source to `Data/LiveView`, installs its package dependencies only to `Data/Python/modules/PersonaLiveView/site-packages`, and obtains the licensed LivePortrait/YuNet models in `Data/LiveView/data/models`. The renderer uses Voxta's own managed Python 3.13/CUDA Torch; it does not create a venv, alter shared site-packages, or patch Voxta web files.
 - Verified on the local Voxta 1.10 installation: embedded `live_bootstrap.py` extracted; managed-Python module dependencies installed; FastAPI 0.141.1, Uvicorn 0.52.4, OpenCV 4.13.0, and MediaPipe 0.10.32 import successfully; existing model receipts and weights remain valid; authenticated Uvicorn renderer starts on loopback. The unauthenticated `/health` request returns 403 as designed.
 - Release workflow builds from the `release` branch, retains a downloadable one-DLL artifact plus helper archive, and creates GitHub Release assets from version tags.
+## Clean-install activation and setup flow — 2026-09-11
+
+- Fixed the clean-install UI failure: the browser adapter now identifies Voxta's chat store by its required methods instead of hard-coded minified export names, which change between Voxta browser builds.
+- Removed the editable Renderer Python setting. The module locates the installed managed interpreter under `Data/Python/python-*-amd64` automatically.
+- Added a first-use installation endpoint. A native Voxta notification prompts an enabled chat to select **Start animation**; that action performs the module-owned dependency/model setup with visible status before starting the renderer.
+- Verified against the Voxta 1.10 browser fixture: adapter assets resolve, the notification store resolves, and 19 native checks, 14 Python tests, and the browser activation suite pass.

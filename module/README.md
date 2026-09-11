@@ -1,4 +1,4 @@
-# Persona Live View — Voxta module 0.5.0
+# Persona Live View — Voxta module 0.5.1
 
 Native .NET 10 module using Voxta SDK 1.10.0, matching this server's assemblies. It appears as **Persona Live View** in Voxta Services. Voxta owns chat, voices, microphone, mood images and motion clips. No Vite server or standalone Persona Studio is used. Older SDK 1.5 servers are incompatible; do not copy SDK assemblies over Voxta's own assemblies.
 
@@ -17,7 +17,7 @@ On the first Live View start, the DLL extracts its renderer source to module-own
 3. Start a new chat. The enabled module includes **Live view** automatically; restore it in chat augmentations if you previously excluded it.
 4. Start the chat with **Live view** selected. Stage opens and animation starts automatically. **Pause animation** stops it; **Start animation** resumes it. The Chat panel’s **Display** section also contains a **Live View** switch for the current chat. Use Voxta’s normal sound controls. If chat startup fails (for example, insufficient VRAM), resolve that Voxta error first.
 
-Settings include renderer Python, automatic/pinned GPU selection, maximum frame rate, internal port and local Voxta address. The default renderer is Voxta's managed `Data/Python/python-3.13.13-amd64/python.exe`; the module detects another Voxta Python version folder when this default changes. Source, models, cached images and logs live under `Data/LiveView`. The renderer uses an authenticated loopback connection proxied through Voxta; the browser uses the Voxta address only. The service supports local browser access on the same machine, not remote clients.
+Settings include automatic/pinned GPU selection, maximum frame rate, internal port and local Voxta address. Renderer Python is discovered automatically from Voxta's managed `Data/Python/python-*-amd64` directory and is intentionally not user-configurable. When Live View first appears in an enabled chat, a native Voxta notification explains that selecting Start animation performs the one-time module setup. Source, models, cached images and logs live under `Data/LiveView`. The renderer uses an authenticated loopback connection proxied through Voxta; the browser uses the Voxta address only. The service supports local browser access on the same machine, not remote clients.
 
 ## Lifecycle and removal
 

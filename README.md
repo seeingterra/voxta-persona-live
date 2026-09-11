@@ -36,10 +36,10 @@ The browser regression uses mocked frames and no GPU/LLM. Native tests use a tem
 Close Voxta first; the install task does not automatically stop it.
 
 ```powershell
-Copy-Item .\artifacts\PersonaLiveView-0.5.0\Voxta.Modules.LiveView.dll 'J:\CODEX\compchat\Voxta\Modules\' -Force
+Copy-Item .\artifacts\PersonaLiveView-0.5.1\Voxta.Modules.LiveView.dll 'J:\CODEX\compchat\Voxta\Modules\' -Force
 ```
 
-Restart Voxta and refresh the browser after updates. On first animation start the DLL extracts module source to `Data/LiveView`, installs module-only dependencies to `Data/Python/modules/PersonaLiveView/site-packages`, and downloads model files to `Data/LiveView/data/models`. The configured renderer Python should remain Voxta's managed `Data/Python/python-3.13.13-amd64/python.exe`.
+Restart Voxta and refresh the browser after updates. The module detects Voxta's managed Python automatically; no Python path is exposed to users. On the first Start animation action, Voxta shows a native setup notification and the DLL extracts module source to `Data/LiveView`, installs module-only dependencies to `Data/Python/modules/PersonaLiveView/site-packages`, and downloads model files to `Data/LiveView/data/models`.
 
 Attach the .NET debugger to Voxta.Server using the supplied launch configuration. Another launch configuration debugs Python motion tests. Do not launch the old standalone/Vite app for module work.
 

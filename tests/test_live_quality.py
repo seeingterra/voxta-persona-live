@@ -113,14 +113,20 @@ def test_blink_reaches_full_closure_and_has_visible_duration():
     assert sum(value>.5 for value in values)>=6
 
 
-def test_live_view_package_excludes_legacy_speech_renderer():
+def test_live_view_package_embeds_only_the_live_renderer():
     build = (Path(__file__).parents[1] / "scripts" / "Build-VoxtaModule.ps1").read_text(encoding="utf-8")
-    install = (Path(__file__).parents[1] / "module" / "Install.ps1").read_text(encoding="utf-8")
-    copy_manifest = next(line for line in build.splitlines() if line.startswith("foreach($name in @('__init__.py'"))
-    assert "'portrait_worker.py'" not in copy_manifest
-    assert "'models.py'" not in copy_manifest
-    assert "Remove-Item -LiteralPath (Join-Path $legacyBackend $name)" in build
-    assert 'Remove-Item -LiteralPath (Join-Path $content "backend\\$name")' in install
+    project = (Path(__file__).parents[1] / "module" / "Voxta.Modules.LiveView" / "Voxta.Modules.LiveView.csproj").read_text(encoding="utf-8")
+    assert 'LogicalName="runtime/backend/live_bootstrap.py"' in project
+    assert "portrait_worker.py" not in project
+    assert "../../backend/models.py" not in project
+    assert "Copy-Item -LiteralPath (Join-Path $workspace 'module\\Voxta.Modules.LiveView\\bin\\Release\\net10.0\\Voxta.Modules.LiveView.dll')" in build
+
+
+def test_live_view_detects_voxta_python_without_exposing_a_path_setting():
+    configuration = (Path(__file__).parents[1] / "module" / "Voxta.Modules.LiveView" / "LiveViewConfiguration.cs").read_text(encoding="utf-8")
+    host = (Path(__file__).parents[1] / "module" / "Voxta.Modules.LiveView" / "RendererHost.cs").read_text(encoding="utf-8")
+    assert "PythonPath" not in configuration
+    assert 'Directory.EnumerateDirectories(pythonRoot,"python-*-amd64")' in host
 
 
 def test_live_view_model_validation_accepts_the_health_check_signature():
