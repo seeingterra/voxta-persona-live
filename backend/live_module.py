@@ -51,7 +51,7 @@ async def session():return {'token':app.state.live_token}
 
 @app.get('/health')
 async def health():
-    checks=[verify('portrait',dependencies=False),verify('portrait_detector')]
+    checks=[verify('portrait',dependencies=False),verify('portrait_detector'),verify('portrait_landmarks')]
     if not all(c['valid'] for c in checks):
         return JSONResponse({'ready':False,'detail':'Live View model files are missing or incomplete.'},status_code=503)
     return {'ready':True,'gpu_loaded':bool(live.process)}

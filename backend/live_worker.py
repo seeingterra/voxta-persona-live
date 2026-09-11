@@ -39,11 +39,12 @@ class LivePortrait:
         import cv2
         from src.config.inference_config import InferenceConfig
         from src.live_portrait_wrapper import LivePortraitWrapper
-        torch.set_num_threads(4)
-        cv2.setNumThreads(2)
         torch.backends.cudnn.benchmark=True
         torch.backends.cudnn.benchmark_limit=4
         self.device='cuda:0' if os.getenv('PERSONA_LIVE_DEVICE')!='cpu' and torch.cuda.is_available() else 'cpu'
+        cpu_threads=min(8,os.cpu_count() or 1)
+        torch.set_num_threads(cpu_threads if self.device=='cpu' else 4)
+        cv2.setNumThreads(4 if self.device=='cpu' else 2)
         # Inductor's max-autotune path is not reliable on the deployed Windows
         # CUDA/Triton stack; retain the stable CUDA-graph acceleration instead.
         self.compiled=False

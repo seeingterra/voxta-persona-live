@@ -8,6 +8,7 @@ from .storage import DATA
 LIVE_VIEW_MODELS = {
     "portrait": "KlingTeam/LivePortrait",
     "portrait_detector": "opencv/opencv_zoo",
+    "portrait_landmarks": "google-ai-edge/mediapipe",
 }
 
 

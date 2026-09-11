@@ -44,7 +44,7 @@
   let awaitingFull=false,frameBuffer=null,paintRequest=0;
   let starting=false,paused=false,chatKey='',active=false,checking=false,lastCheck=0;
   const native=BASE.startsWith(location.origin+'/persona-live-view');
-  const state={version:'0.5.1',enabled:false,preparing:false,frames:0,fps:0,source:'',error:'',audioLevel:0};window.__personaLiveView=state;
+  const state={version:'0.5.5',enabled:false,preparing:false,frames:0,fps:0,source:'',error:'',audioLevel:0};window.__personaLiveView=state;
   function notify(level,message,details,tag){notifier?.notify({level,message,details,tag});}
   async function api(path,body){if(!token){const response=await fetch(BASE+'/api/session');const value=await response.json().catch(()=>({}));if(!response.ok)throw Error(value.detail||'Live View could not start. Check its settings in Voxta Services.');token=value.token;}
     const r=await fetch(BASE+'/api/voxta/'+path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json','X-Persona-Token':token}:{},body:body?JSON.stringify(body):undefined});if(!r.ok){const e=await r.json().catch(()=>({}));throw Error(e.detail||'Live View renderer unavailable.');}return r.json();}
@@ -105,7 +105,7 @@
             ctx.drawImage(bitmap,region?.x||0,region?.y||0);bitmap.close();
             if(mask){ctx.globalCompositeOperation='destination-in';ctx.drawImage(mask,0,0,frameBuffer.width,frameBuffer.height);ctx.globalCompositeOperation='source-over';}
             cancelAnimationFrame(paintRequest);paint();
-            host.classList.add('persona-live-active');layer.style.opacity='1';layer.style.background=frameHeader?.transparent?'transparent':'#181d21';layer.classList.toggle('persona-live-cutout',!!frameHeader?.transparent);frames++;state.frames++;const now=performance.now();if(now-lastTime>1000){fps=frames*1000/(now-lastTime);frames=0;lastTime=now;state.fps=fps;status.textContent=`Live · ${fps.toFixed(0)} fps`;}
+            host.classList.add('persona-live-active');layer.style.opacity='1';layer.style.background=frameHeader?.transparent?'transparent':'#181d21';layer.classList.toggle('persona-live-cutout',!!frameHeader?.transparent);frames++;state.frames++;const now=performance.now();if(now-lastTime>1000){fps=frames*1000/(now-lastTime);frames=0;lastTime=now;state.fps=fps;status.textContent=`Live · ${fps<1?fps.toFixed(1):fps.toFixed(0)} fps`;}
           }catch(e){fail(e);}finally{decoding=false;}};
         ws.onerror=()=>fail(Error('Animation connection failed. Check Live View settings in Voxta Services.'));ws.onclose=()=>{if(enabled)fail(Error('Animation disconnected. Press Start animation to retry.'));};
       }

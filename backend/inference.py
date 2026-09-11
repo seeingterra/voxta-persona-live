@@ -28,7 +28,11 @@ class Worker:
 
     async def call(self,payload,cancel=None):
         if self.module=='backend.live_worker':
-            valid=verify('portrait',dependencies=False)['valid'] and ready('portrait_detector')
+            valid=(
+                verify('portrait',dependencies=False)['valid']
+                and ready('portrait_detector')
+                and ready('portrait_landmarks')
+            )
         else:valid=ready(self.stage)
         if not valid:raise RuntimeError(f'Install the {self.stage} model files and their receipts first.')
         if self.lock.locked():raise RuntimeError(f'{self.stage} is busy. Stop the current response or wait.')
@@ -57,6 +61,12 @@ class Worker:
                         if message['type']=='error':raise RuntimeError(message['message'])
                         if message['type']=='result':result=message
                         if message['type']=='done':return result
+            except TimeoutError as error:
+                await self.stop()
+                raise RuntimeError(
+                    f'{self.stage} render timed out after {self.timeout} seconds. '
+                    'Free GPU memory or select another graphics processor in Persona Live View settings.'
+                ) from error
             except BaseException:
                 await self.stop()
                 raise

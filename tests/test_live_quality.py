@@ -143,6 +143,26 @@ def test_live_view_bootstrap_installs_required_landmark_model():
     assert 'DATA / "models" / "portrait_landmarks"' in bootstrap
 
 
+def test_live_renderer_avoids_saturated_gpus():
+    from backend.hardware import select_live_device
+    assert select_live_device([
+        {"uuid": "GPU-small", "total_mb": 8192, "free_mb": 4300},
+        {"uuid": "GPU-large", "total_mb": 16384, "free_mb": 3400},
+    ]) == "cpu"
+    assert select_live_device([
+        {"uuid": "GPU-small", "total_mb": 8192, "free_mb": 6000},
+        {"uuid": "GPU-large", "total_mb": 16384, "free_mb": 11000},
+    ]) == "GPU-small"
+
+
+def test_live_renderer_requires_landmark_receipt_and_bounds_hung_renders():
+    inference = (Path(__file__).parents[1] / "backend" / "inference.py").read_text(encoding="utf-8")
+    bridge = (Path(__file__).parents[1] / "backend" / "voxta.py").read_text(encoding="utf-8")
+    assert "ready('portrait_landmarks')" in inference
+    assert "timeout=30" in bridge
+    assert "render timed out after" in inference
+
+
 def test_live_view_worker_configures_its_own_liveportrait_import_path():
     worker = (Path(__file__).parents[1] / "backend" / "live_worker.py").read_text(encoding="utf-8")
     assert 'LIVEPORTRAIT_ROOT = ROOT / "vendor" / "liveportrait"' in worker

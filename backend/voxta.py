@@ -15,7 +15,7 @@ from fastapi.responses import Response,FileResponse
 from pydantic import BaseModel,Field
 from PIL import Image
 from .storage import DATA,ROOT,asset_path,atomic_json
-from .hardware import detect
+from .hardware import detect, select_live_device
 from .inference import Worker
 from .optional_visual import PYTHON
 
@@ -23,7 +23,7 @@ router=APIRouter(prefix='/api/voxta')
 BASE=os.getenv('PERSONA_VOXTA_URL','http://localhost:5384').rstrip('/')
 ID=r'[a-fA-F0-9-]{36}'
 BINDINGS=DATA/'voxta-characters.json'
-live=Worker('portrait','cpu',python=PYTHON,module='backend.live_worker',timeout=120)
+live=Worker('portrait','cpu',python=PYTHON,module='backend.live_worker',timeout=30)
 live_session=asyncio.Lock()
 
 
@@ -261,9 +261,8 @@ async def frames(socket:WebSocket,image_id:str):
             if path.suffix!='.png':raise ValueError('Use a portrait image')
             if not live.process:
                 # Prefer the smaller suitable GPU, leaving the largest card for Voxta.
-                gpus=sorted((g for g in detect()['gpus'] if g['free_mb']>=2200),key=lambda g:g['total_mb'])
                 device=os.getenv('PERSONA_LIVE_DEVICE','auto')
-                live.device=(gpus[0]['uuid'] if gpus else 'cpu') if device=='auto' else device
+                live.device=select_live_device(detect()['gpus']) if device=='auto' else device
             async def receive():
                 while True:
                     value=await socket.receive_json()

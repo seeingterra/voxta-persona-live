@@ -4,6 +4,9 @@ import subprocess
 import ctypes
 import sys
 
+LIVE_RENDERER_MIN_FREE_MB = 5500
+
+
 def detect():
     gpus, warning = [], None
     try:
@@ -14,6 +17,13 @@ def detect():
     except (OSError, ValueError, subprocess.SubprocessError) as e:
         warning = f'GPU detection unavailable: {type(e).__name__}; CPU remains available.'
     return {'gpus':gpus, 'warning':warning, 'platform':sys.platform}
+
+
+def select_live_device(gpus):
+    """Select a GPU with enough headroom for the persistent LivePortrait model."""
+    eligible = [gpu for gpu in gpus if gpu["free_mb"] >= LIVE_RENDERER_MIN_FREE_MB]
+    return min(eligible, key=lambda gpu: gpu["total_mb"])["uuid"] if eligible else "cpu"
+
 
 def plan(gpus, overrides=None):
     overrides = overrides or {}
