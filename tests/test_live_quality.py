@@ -186,6 +186,13 @@ def test_service_initialization_does_not_block_chat_creation():
     assert "PrepareAsync" not in service
 
 
+def test_native_activation_registers_runtime_and_persistent_chat_ids():
+    service = (Path(__file__).parents[1] / "module" / "Voxta.Modules.LiveView" / "LiveViewService.cs").read_text(encoding="utf-8")
+    assert "session is IChatSessionData data" in service
+    assert "new[]{session.SessionId,data.ChatId}" in service
+    assert "foreach(var id in ids)host.AddSession(id);" in service
+
+
 def test_browser_uses_voxta_active_chat_session_accessor():
     adapter = (Path(__file__).parents[1] / "addon" / "voxta-live-view" / "live-view.js").read_text(encoding="utf-8")
     assert "store?.getActiveChat?.()||store?.chat?.()" in adapter

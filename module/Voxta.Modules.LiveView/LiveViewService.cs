@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using Voxta.Abstractions.Chats.Objects.Chats;
 using Voxta.Abstractions.Chats.Sessions;
 using Voxta.Abstractions.Security;
 using Voxta.Abstractions.Services;
@@ -24,7 +25,8 @@ public class LiveViewService(RendererHost renderer, ILogger<LiveViewService> log
             ActivateAsync=(session,_)=>
             {
                 renderer.Configure(settings);
-                var instance=new LiveViewSession(renderer,session.SessionId);
+                var ids=session is IChatSessionData data ? new[]{session.SessionId,data.ChatId} : new[]{session.SessionId};
+                var instance=new LiveViewSession(renderer,ids);
                 return Task.FromResult<IChatAugmentationServiceInstanceBase?>(instance);
             }
         }]);
@@ -36,14 +38,14 @@ public class LiveViewService(RendererHost renderer, ILogger<LiveViewService> log
 public sealed class LiveViewSession : IChatAugmentationServiceInstanceBase, IChatEndAugmentation
 {
     private RendererHost? renderer;
-    private readonly Guid id;
-    public LiveViewSession(RendererHost host, Guid? sessionId=null) { renderer=host; id=sessionId??Guid.NewGuid();host.AddSession(id); }
+    private readonly Guid[] ids;
+    public LiveViewSession(RendererHost host, params Guid[] sessionIds) { renderer=host; ids=sessionIds.Length>0?sessionIds.Distinct().ToArray():[Guid.NewGuid()];foreach(var id in ids)host.AddSession(id); }
     public ServiceTypes[] GetRequiredServiceTypes() => [];
     public string[] GetAugmentationNames() => ["persona_live_view"];
     public ValueTask OnChatEndAsync(CancellationToken cancellationToken) => DisposeAsync();
     public async ValueTask DisposeAsync()
     {
         var host=Interlocked.Exchange(ref renderer,null);
-        if(host!=null) await host.RemoveSessionAsync(id);
+        if(host!=null)foreach(var id in ids)await host.RemoveSessionAsync(id);
     }
 }

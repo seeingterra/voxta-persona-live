@@ -47,7 +47,7 @@
   let awaitingFull=false,frameBuffer=null,paintRequest=0;
   let starting=false,paused=false,chatKey='',active=false,checking=false,lastCheck=0;
   const native=BASE.startsWith(location.origin+'/persona-live-view');
-  const state={version:'0.5.12',enabled:false,preparing:false,frames:0,fps:0,source:'',error:'',audioLevel:0};window.__personaLiveView=state;
+  const state={version:'0.5.13',enabled:false,preparing:false,frames:0,fps:0,source:'',error:'',audioLevel:0};window.__personaLiveView=state;
   function notify(level,message,details,tag){notifier?.notify({level,message,details,tag});}
   function setStatus(message,loading=false){status.textContent=message;status.classList.toggle('persona-live-loading',loading);}
   async function api(path,body){if(!token){const response=await fetch(BASE+'/api/session');const value=await response.json().catch(()=>({}));if(!response.ok)throw Error(value.detail||'Live View could not start. Check its settings in Voxta Services.');token=value.token;}
