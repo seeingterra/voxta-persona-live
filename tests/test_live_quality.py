@@ -186,6 +186,11 @@ def test_service_initialization_does_not_block_chat_creation():
     assert "PrepareAsync" not in service
 
 
+def test_browser_uses_voxta_active_chat_session_accessor():
+    adapter = (Path(__file__).parents[1] / "addon" / "voxta-live-view" / "live-view.js").read_text(encoding="utf-8")
+    assert "store?.getActiveChat?.()||store?.chat?.()" in adapter
+
+
 def test_live_view_worker_configures_its_own_liveportrait_import_path():
     worker = (Path(__file__).parents[1] / "backend" / "live_worker.py").read_text(encoding="utf-8")
     assert 'LIVEPORTRAIT_ROOT = ROOT / "vendor" / "liveportrait"' in worker
