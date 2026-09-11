@@ -136,6 +136,13 @@ def test_live_view_model_validation_accepts_the_health_check_signature():
     assert verify("unknown", dependencies=False)["valid"] is False
 
 
+def test_live_view_bootstrap_installs_required_landmark_model():
+    bootstrap = (Path(__file__).parents[1] / "backend" / "live_bootstrap.py").read_text(encoding="utf-8")
+    assert '"face_landmarker.task"' in bootstrap
+    assert "storage.googleapis.com/mediapipe-models/face_landmarker/" in bootstrap
+    assert 'DATA / "models" / "portrait_landmarks"' in bootstrap
+
+
 def test_live_view_worker_configures_its_own_liveportrait_import_path():
     worker = (Path(__file__).parents[1] / "backend" / "live_worker.py").read_text(encoding="utf-8")
     assert 'LIVEPORTRAIT_ROOT = ROOT / "vendor" / "liveportrait"' in worker

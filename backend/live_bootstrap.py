@@ -52,6 +52,13 @@ DETECTOR_FILES = {
     ),
 }
 
+LANDMARK_FILES = {
+    "face_landmarker.task": (
+        "https://storage.googleapis.com/mediapipe-models/face_landmarker/"
+        "face_landmarker/float16/latest/face_landmarker.task"
+    ),
+}
+
 
 def _receipt(folder: Path, repo: str, revision: str, files: list[Path]) -> None:
     folder.mkdir(parents=True, exist_ok=True)
@@ -76,8 +83,11 @@ def _receipt(folder: Path, repo: str, revision: str, files: list[Path]) -> None:
 def _models_ready() -> bool:
     portrait = DATA / "models" / "portrait"
     detector = DATA / "models" / "portrait_detector"
-    return all((portrait / path).is_file() for path in PORTRAIT_FILES) and all(
-        (detector / path).is_file() for path in DETECTOR_FILES
+    landmarks = DATA / "models" / "portrait_landmarks"
+    return (
+        all((portrait / path).is_file() for path in PORTRAIT_FILES)
+        and all((detector / path).is_file() for path in DETECTOR_FILES)
+        and all((landmarks / path).is_file() for path in LANDMARK_FILES)
     )
 
 
@@ -138,6 +148,18 @@ def _install_models() -> None:
         "opencv/opencv_zoo",
         "47534e27c9851bb1128ccc0102f1145e27f23f98",
         [detector / path for path in DETECTOR_FILES],
+    )
+    landmarks = DATA / "models" / "portrait_landmarks"
+    landmarks.mkdir(parents=True, exist_ok=True)
+    for relative, source in LANDMARK_FILES.items():
+        destination = landmarks / relative
+        if not destination.is_file():
+            subprocess.run(["curl", "--fail", "--location", "--output", str(destination), source], check=True)
+    _receipt(
+        landmarks,
+        "google-ai-edge/mediapipe",
+        "face_landmarker/float16/latest",
+        [landmarks / path for path in LANDMARK_FILES],
     )
 
 
