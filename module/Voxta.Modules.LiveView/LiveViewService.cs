@@ -13,7 +13,6 @@ public class LiveViewService(RendererHost renderer, ILogger<LiveViewService> log
     {
         await base.InitializeAsync(cancellationToken);
         renderer.Configure(LiveViewConfiguration.Read(ModuleConfiguration));
-        await renderer.PrepareAsync(cancellationToken);
     }
     public Task<AugmentationPlanItem[]> PlanAsync(IChatAugmentationPlanContext context, CancellationToken cancellationToken)
     {

@@ -178,11 +178,12 @@ def test_live_bootstrap_requires_current_complete_setup():
     assert 'revision.GetInt32()==2' in host
 
 
-def test_service_prepares_runtime_when_voxta_finishes_installing():
+def test_service_initialization_does_not_block_chat_creation():
     service = (Path(__file__).parents[1] / "module" / "Voxta.Modules.LiveView" / "LiveViewService.cs").read_text(encoding="utf-8")
     assert "protected override async Task InitializeAsync(CancellationToken cancellationToken)" in service
     assert "await base.InitializeAsync(cancellationToken);" in service
-    assert "await renderer.PrepareAsync(cancellationToken);" in service
+    assert "renderer.Configure(LiveViewConfiguration.Read(ModuleConfiguration));" in service
+    assert "PrepareAsync" not in service
 
 
 def test_live_view_worker_configures_its_own_liveportrait_import_path():

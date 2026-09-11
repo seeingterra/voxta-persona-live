@@ -1,4 +1,4 @@
-# Persona Live View — Voxta module 0.5.10
+# Persona Live View — Voxta module 0.5.11
 
 Native .NET 10 module using Voxta SDK 1.10.0, matching this server's assemblies. It appears as **Persona Live View** in Voxta Services. Voxta owns chat, voices, microphone, mood images and motion clips. No Vite server or standalone Persona Studio is used. Older SDK 1.5 servers are incompatible; do not copy SDK assemblies over Voxta's own assemblies.
 
@@ -10,14 +10,14 @@ Copy `Voxta.Modules.LiveView.dll` to Voxta's `Modules` folder. The release archi
 .\Install.ps1 -VoxtaPath 'C:\Voxta'
 ```
 
-When you choose **Finish & Install** after adding Persona Live View in Services, the DLL extracts its renderer source to module-owned `Data/LiveView`, installs only its dependencies in `Data/Python/modules/PersonaLiveView/site-packages`, and downloads the MIT-licensed LivePortrait and YuNet model files to `Data/LiveView/data/models`. It uses Voxta's managed CUDA Python and never creates an external virtual environment or modifies Voxta web files. This first installation needs internet access and can take several minutes; later starts are offline. No character photos are bundled. Python and model dependencies retain their individual licenses.
+On the first Live View start, the DLL extracts its renderer source to module-owned `Data/LiveView`, installs only its dependencies in `Data/Python/modules/PersonaLiveView/site-packages`, and downloads the MIT-licensed LivePortrait and YuNet model files to `Data/LiveView/data/models`. It uses Voxta's managed CUDA Python and never creates an external virtual environment or modifies Voxta web files. The first start therefore needs internet access and can take several minutes; later starts are offline. No character photos are bundled. Python and model dependencies retain their individual licenses.
 
 1. Restart Voxta (module discovery happens at startup).
-2. Add **Persona Live View** in **Services**, then choose **Finish & Install** and wait for the setup to complete.
+2. Add **Persona Live View** in **Services** and choose **Finish & Install**.
 3. Start a new chat. The enabled module includes **Live view** automatically; restore it in chat augmentations if you previously excluded it.
 4. Start the chat with **Live view** selected. Stage opens and animation starts automatically. **Pause animation** stops it; **Start animation** resumes it. The Chat panel’s **Display** section also contains a **Live View** switch for the current chat. Use Voxta’s normal sound controls. If chat startup fails (for example, insufficient VRAM), resolve that Voxta error first.
 
-Settings include automatic/pinned GPU selection, maximum frame rate, internal port and local Voxta address. Renderer Python is discovered automatically from Voxta's managed `Data/Python/python-*-amd64` directory and is intentionally not user-configurable. Source, models, cached images and logs live under `Data/LiveView`. The renderer uses an authenticated loopback connection proxied through Voxta; the browser uses the Voxta address only. The service supports local browser access on the same machine, not remote clients.
+Settings include automatic/pinned GPU selection, maximum frame rate, internal port and local Voxta address. Renderer Python is discovered automatically from Voxta's managed `Data/Python/python-*-amd64` directory and is intentionally not user-configurable. When Live View first appears in an enabled chat, a native Voxta notification explains that selecting Start animation performs the one-time module setup. Source, models, cached images and logs live under `Data/LiveView`. The renderer uses an authenticated loopback connection proxied through Voxta; the browser uses the Voxta address only. The service supports local browser access on the same machine, not remote clients.
 
 ## Lifecycle and removal
 
