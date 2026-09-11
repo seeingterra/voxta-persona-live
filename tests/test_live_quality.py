@@ -169,6 +169,15 @@ def test_native_proxy_allows_in_chat_hardware_and_usage_endpoints():
     assert '"/api/voxta/usage"' in startup
 
 
+def test_live_bootstrap_requires_current_complete_setup():
+    bootstrap = (Path(__file__).parents[1] / "backend" / "live_bootstrap.py").read_text(encoding="utf-8")
+    host = (Path(__file__).parents[1] / "module" / "Voxta.Modules.LiveView" / "RendererHost.cs").read_text(encoding="utf-8")
+    assert "BOOTSTRAP_REVISION = 2" in bootstrap
+    assert '"revision": BOOTSTRAP_REVISION' in bootstrap
+    assert 'folder / "receipt.json"' in bootstrap
+    assert 'revision.GetInt32()==2' in host
+
+
 def test_live_view_worker_configures_its_own_liveportrait_import_path():
     worker = (Path(__file__).parents[1] / "backend" / "live_worker.py").read_text(encoding="utf-8")
     assert 'LIVEPORTRAIT_ROOT = ROOT / "vendor" / "liveportrait"' in worker

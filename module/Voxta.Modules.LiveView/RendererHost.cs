@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Reflection;
+using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -22,7 +23,21 @@ public sealed class RendererHost : IAsyncDisposable
     public string ContentRoot => Path.Combine(Root,"Data","LiveView");
     public string Token { get; } = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
     public bool Enabled => settings!=null;
-    public bool IsPrepared => File.Exists(Path.Combine(Root,"Data","Python","modules","PersonaLiveView","bootstrap.json"));
+    public bool IsPrepared
+    {
+        get
+        {
+            try
+            {
+                using var stream=File.OpenRead(Path.Combine(Root,"Data","Python","modules","PersonaLiveView","bootstrap.json"));
+                using var marker=JsonDocument.Parse(stream);
+                return marker.RootElement.TryGetProperty("revision",out var revision) && revision.GetInt32()==2;
+            }
+            catch(IOException) { return false; }
+            catch(JsonException) { return false; }
+            catch(InvalidOperationException) { return false; }
+        }
+    }
     public string Origin => settings?.VoxtaUrl.TrimEnd('/') ?? "http://localhost:5384";
     public int Port => settings?.Port ?? 8766;
     public RendererHost(IHostApplicationLifetime lifetime, ILogger<RendererHost> log)

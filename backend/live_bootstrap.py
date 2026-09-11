@@ -14,6 +14,7 @@ PYTHON_ROOT = Path(sys.executable).resolve().parent.parent
 MODULE_ROOT = Path(os.environ.get("PERSONA_MODULE_ROOT", PYTHON_ROOT / "modules" / "PersonaLiveView")).resolve()
 SITE_PACKAGES = Path(os.environ.get("PERSONA_MODULE_SITE_PACKAGES", MODULE_ROOT / "site-packages")).resolve()
 MARKER = MODULE_ROOT / "bootstrap.json"
+BOOTSTRAP_REVISION = 2
 
 REQUIREMENTS = [
     "huggingface-hub>=1.28,<2",
@@ -88,15 +89,16 @@ def _models_ready() -> bool:
         all((portrait / path).is_file() for path in PORTRAIT_FILES)
         and all((detector / path).is_file() for path in DETECTOR_FILES)
         and all((landmarks / path).is_file() for path in LANDMARK_FILES)
+        and all((folder / "receipt.json").is_file() for folder in (portrait, detector, landmarks))
     )
 
 
-def _install_dependencies() -> None:
-    expected = {"python": sys.version, "requirements": REQUIREMENTS}
+def _install_dependencies() -> dict:
+    expected = {"revision": BOOTSTRAP_REVISION, "python": sys.version, "requirements": REQUIREMENTS}
     if MARKER.is_file():
         try:
             if json.loads(MARKER.read_text(encoding="utf-8")) == expected:
-                return
+                return expected
         except json.JSONDecodeError:
             pass
     SITE_PACKAGES.mkdir(parents=True, exist_ok=True)
@@ -113,8 +115,7 @@ def _install_dependencies() -> None:
         *REQUIREMENTS,
     ]
     subprocess.run(command, check=True)
-    MARKER.parent.mkdir(parents=True, exist_ok=True)
-    MARKER.write_text(json.dumps(expected, indent=2), encoding="utf-8")
+    return expected
 
 
 def _install_models() -> None:
@@ -164,8 +165,10 @@ def _install_models() -> None:
 
 
 def main() -> None:
-    _install_dependencies()
+    expected = _install_dependencies()
     _install_models()
+    MARKER.parent.mkdir(parents=True, exist_ok=True)
+    MARKER.write_text(json.dumps(expected, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":

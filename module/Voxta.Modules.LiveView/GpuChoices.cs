@@ -32,7 +32,7 @@ public static class GpuChoices
     {
         using var timeout=CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         timeout.CancelAfter(TimeSpan.FromSeconds(4));
-        using var process=new Process {StartInfo=new ProcessStartInfo("nvidia-smi") {UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true}};
+        using var process=new Process {StartInfo=new ProcessStartInfo(NvidiaSmiPath()) {UseShellExecute=false,CreateNoWindow=true,RedirectStandardOutput=true,RedirectStandardError=true}};
         process.StartInfo.ArgumentList.Add("--query-gpu=index,name,uuid,memory.total");
         process.StartInfo.ArgumentList.Add("--format=csv,noheader,nounits");
         try
@@ -50,5 +50,10 @@ public static class GpuChoices
         {
             try {if(!process.HasExited)process.Kill(entireProcessTree:true);}catch(InvalidOperationException){}
         }
+    }
+    private static string NvidiaSmiPath()
+    {
+        var system=Path.Combine(Environment.SystemDirectory,"nvidia-smi.exe");
+        return File.Exists(system) ? system : "nvidia-smi";
     }
 }

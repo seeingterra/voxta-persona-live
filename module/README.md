@@ -1,4 +1,4 @@
-# Persona Live View — Voxta module 0.5.8
+# Persona Live View — Voxta module 0.5.9
 
 Native .NET 10 module using Voxta SDK 1.10.0, matching this server's assemblies. It appears as **Persona Live View** in Voxta Services. Voxta owns chat, voices, microphone, mood images and motion clips. No Vite server or standalone Persona Studio is used. Older SDK 1.5 servers are incompatible; do not copy SDK assemblies over Voxta's own assemblies.
 
