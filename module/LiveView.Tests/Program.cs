@@ -43,13 +43,13 @@ try
     Check((await client.GetAsync("/persona-live-view/api/session")).StatusCode==HttpStatusCode.ServiceUnavailable,"disabled module does not start renderer");
     var render=args.Contains("--render");
     renderer.Configure(new(render?"auto":"cpu",5,18766,"http://localhost:5384"));
-    Check((await client.GetAsync("/persona-live-view/api/session")).StatusCode==HttpStatusCode.ServiceUnavailable,"renderer requires active chat augmentation");
+    Check((await client.GetStringAsync("/persona-live-view/api/voxta/module-state?sessionId={Guid.NewGuid()}")).Contains("\"active\":true"),"enabled service is available without a private chat session callback");
     var sessionId=Guid.NewGuid();
     Check((await client.GetStringAsync($"/persona-live-view/api/voxta/module-state?sessionId={sessionId}")).Contains("\"active\":false"),"unselected chat reports inactive without loading models");
     await using(var session=new LiveViewSession(renderer,sessionId))
     {
-        Check((await client.GetStringAsync($"/persona-live-view/api/voxta/module-state?sessionId={sessionId}")).Contains("\"active\":true"),"selected chat reports activation to its stage");
-        Check((await client.GetStringAsync($"/persona-live-view/api/voxta/module-state?sessionId={Guid.NewGuid()}")).Contains("\"active\":false"),"activation is scoped to the correct chat");
+        Check((await client.GetStringAsync($"/persona-live-view/api/voxta/module-state?sessionId={sessionId}")).Contains("\"active\":true"),"enabled service reports activation to its stage");
+        Check((await client.GetStringAsync($"/persona-live-view/api/voxta/module-state?sessionId={Guid.NewGuid()}")).Contains("\"active\":true"),"enabled service remains available across Voxta chat identifiers");
         using(var installResponse=await client.PostAsync("/persona-live-view/api/voxta/install",null))
         {
             var installBody=await installResponse.Content.ReadAsStringAsync();

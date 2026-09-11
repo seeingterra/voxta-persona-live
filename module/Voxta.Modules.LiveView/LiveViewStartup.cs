@@ -71,7 +71,7 @@ public sealed class LiveViewStartup(RendererHost renderer) : IStartupFilter
         {
             if(path=="/api/voxta/module-state" && c.Request.Method=="GET")
             {
-                var active=Guid.TryParse(c.Request.Query["sessionId"],out var sessionId) && renderer.HasSession(sessionId);
+                var active=renderer.Enabled;
                 await c.Response.WriteAsJsonAsync(new{enabled=renderer.Enabled,active});return;
             }
             if(path.StartsWith("/api/voxta/addon/") && c.Request.Method=="GET")

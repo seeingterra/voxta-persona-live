@@ -67,7 +67,6 @@ public sealed class RendererHost : IAsyncDisposable
         try
         {
             var config=settings ?? throw new InvalidOperationException("Enable Persona Live View in Voxta Services.");
-            if(sessions.IsEmpty)throw new InvalidOperationException("Select Live view in chat augmentations and start the chat. If Voxta cannot start it, resolve the chat error first.");
             if(process is {HasExited:false})return;
             var python=await ResolvePythonAsync(cancellation);
             if(!File.Exists(python))throw new FileNotFoundException("Voxta's managed Python was not found. Reinstall or repair Voxta, then restart Persona Live View.");

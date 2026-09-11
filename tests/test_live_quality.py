@@ -193,6 +193,13 @@ def test_native_activation_registers_runtime_and_persistent_chat_ids():
     assert "foreach(var id in ids)host.AddSession(id);" in service
 
 
+def test_enabled_service_does_not_depend_on_private_augmentation_session_state():
+    host = (Path(__file__).parents[1] / "module" / "Voxta.Modules.LiveView" / "RendererHost.cs").read_text(encoding="utf-8")
+    startup = (Path(__file__).parents[1] / "module" / "Voxta.Modules.LiveView" / "LiveViewStartup.cs").read_text(encoding="utf-8")
+    assert 'if(sessions.IsEmpty)throw' not in host
+    assert "var active=renderer.Enabled;" in startup
+
+
 def test_browser_uses_voxta_active_chat_session_accessor():
     adapter = (Path(__file__).parents[1] / "addon" / "voxta-live-view" / "live-view.js").read_text(encoding="utf-8")
     assert "store?.getActiveChat?.()||store?.chat?.()" in adapter
