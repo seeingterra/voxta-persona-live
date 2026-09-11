@@ -205,6 +205,15 @@ def test_browser_uses_voxta_active_chat_session_accessor():
     assert "store?.getActiveChat?.()||store?.chat?.()" in adapter
 
 
+def test_gpu_decoder_reclaims_warmup_cache_and_keeps_source_features_half_precision():
+    worker = (Path(__file__).parents[1] / "backend" / "live_worker.py").read_text(encoding="utf-8")
+    assert "torch.cuda.empty_cache()" in worker
+    assert "feature=feature.to(dtype=torch.float16)" in worker
+    assert "'gpu_reserved_mb':round(torch.cuda.memory_reserved()/1024**2,1)" in worker
+    adapter = (Path(__file__).parents[1] / "addon" / "voxta-live-view" / "live-view.js").read_text(encoding="utf-8")
+    assert "VRAM ${(state.gpuAllocatedMb/1024).toFixed(1)}/${(state.gpuTotalMb/1024).toFixed(1)} GB" in adapter
+
+
 def test_live_view_worker_configures_its_own_liveportrait_import_path():
     worker = (Path(__file__).parents[1] / "backend" / "live_worker.py").read_text(encoding="utf-8")
     assert 'LIVEPORTRAIT_ROOT = ROOT / "vendor" / "liveportrait"' in worker

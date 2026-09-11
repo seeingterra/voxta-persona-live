@@ -86,6 +86,9 @@ class LivePortrait:
                 with torch.cuda.stream(stream):
                     for _ in range(3):run(self.graph_feature,self.graph_source,self.graph_target)
                 torch.cuda.current_stream().wait_stream(stream)
+                # Warm-up allocations are not needed by the captured graph. Releasing
+                # them first avoids retaining a second full decoder activation pool.
+                torch.cuda.empty_cache()
                 graph=torch.cuda.CUDAGraph()
                 with torch.cuda.graph(graph):self.graph_out=run(self.graph_feature,self.graph_source,self.graph_target)
                 self.graph=graph
@@ -121,7 +124,9 @@ class LivePortrait:
                     composite.source_eyes=self.landmarks.measure_eyes(composite.crop)
                     source=self.model.prepare_source(composite.crop)
                     info=self.model.get_kp_info(source)
-                    self.cache[identity]=(info,self.model.extract_feature_3d(source),self.model.transform_keypoint(info),composite)
+                    feature=self.model.extract_feature_3d(source)
+                    if self.device!='cpu':feature=feature.to(dtype=torch.float16)
+                    self.cache[identity]=(info,feature,self.model.transform_keypoint(info),composite)
                     if len(self.cache)>4:del self.cache[next(iter(self.cache))]
                 self.info,self.feature,self.kp,self.composite=self.cache[identity]
                 self.identity=identity
@@ -169,7 +174,11 @@ class LivePortrait:
                 ok,jpeg=cv2.imencode('.jpg',cv2.cvtColor(image,cv2.COLOR_RGB2BGR),[cv2.IMWRITE_JPEG_QUALITY,92])
             if not ok:raise RuntimeError('Frame encoding failed')
             encode_ms=(time.perf_counter()-started)*1000-neural_ms-compose_ms
-        return {'source_lip':self.composite.source_lip,'mouth_detected':self.composite.source_lip is not None,'image':base64.b64encode(jpeg).decode(),'patch':self.composite.bounds if patch_only else None,'content_type':kind,'transparent':transparent,'alpha_embedded':transparent,'accelerated':bool(self.graph),'compiled':self.compiled,'render_ms':round((time.perf_counter()-started)*1000,1),'neural_ms':round(neural_ms,1),'compose_ms':round(compose_ms,1),'encode_ms':round(encode_ms,1),'device':self.device}
+        usage={}
+        if self.device!='cpu':
+            free,total=torch.cuda.mem_get_info()
+            usage={'gpu_allocated_mb':round(torch.cuda.memory_allocated()/1024**2,1),'gpu_reserved_mb':round(torch.cuda.memory_reserved()/1024**2,1),'gpu_free_mb':round(free/1024**2,1),'gpu_total_mb':round(total/1024**2,1)}
+        return {'source_lip':self.composite.source_lip,'mouth_detected':self.composite.source_lip is not None,'image':base64.b64encode(jpeg).decode(),'patch':self.composite.bounds if patch_only else None,'content_type':kind,'transparent':transparent,'alpha_embedded':transparent,'accelerated':bool(self.graph),'compiled':self.compiled,'render_ms':round((time.perf_counter()-started)*1000,1),'neural_ms':round(neural_ms,1),'compose_ms':round(compose_ms,1),'encode_ms':round(encode_ms,1),'device':self.device,**usage}
 
 
 def main():
