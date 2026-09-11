@@ -1,4 +1,4 @@
-# Build More Presence Into Companion AI
+# Build More Presence Into Companion and Assistant AI's
 
 > **Persona Live View** is about one thing: making the character on screen feel less static, and the conversation feel more alive.
 
@@ -7,7 +7,7 @@
 [![Status](https://img.shields.io/badge/status-public%20beta-f2c94c)](https://github.com/seeingterra/voxta-persona-live)
 
 > ## Public beta
-> Persona Live View is usable today, but it is still in **public beta**. Development will continue: fixing rough edges, improving speed and visual quality, adding functionality, and broadening compatibility. Expect active iteration, occasional breaking changes between beta builds, and a project that gets better because people actually use it.
+> My first product, Persona Live View is usable today, but it is still in **public beta**. Development will continue: fixing rough edges, improving speed and visual quality, adding functionality, and broadening compatibility. Expect active iteration, occasional breaking changes between beta builds, and a project that gets better because people actually use it.
 
 ## The idea
 
@@ -41,6 +41,7 @@ The project already animates portraits in real time. The next phase is about mak
 - **Full-detail speed.** Continued work on latency and frame rate without simply throwing away face detail. The focus is on smarter caching, efficient GPU use, smaller bottlenecks, and real measurements on supported hardware.
 - **Better image handling.** Stronger behavior across realistic art, stylised art, transparent cutouts, and mood-image changes. Source quality still matters, but the module should be more forgiving where it can be.
 - **A smoother setup and update path.** Fewer manual steps, clearer errors, safer upgrades, and better documentation for ordinary users as well as tinkerers.
+- **Supporter and backer ideas! You talk, I listen!
 
 ## Further ahead
 
