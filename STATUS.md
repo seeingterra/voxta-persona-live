@@ -156,3 +156,10 @@ RTX 4080: 16,376 MiB. RTX 3070: 8,192 MiB. RAM: 64 GiB. Separate workload placem
 - Removed the editable Renderer Python setting. The module locates the installed managed interpreter under `Data/Python/python-*-amd64` automatically.
 - Added a first-use installation endpoint. A native Voxta notification prompts an enabled chat to select **Start animation**; that action performs the module-owned dependency/model setup with visible status before starting the renderer.
 - Verified against the Voxta 1.10 browser fixture: adapter assets resolve, the notification store resolves, and 19 native checks, 14 Python tests, and the browser activation suite pass.
+## Clean-install runtime compatibility fix — 2026-09-11
+
+- Fixed a clean-install bootstrap failure where Voxta's managed Python could be present but not yet runtime-ready (`urllib`/`pip` missing), which previously surfaced as `Live View runtime setup failed`.
+- Runtime preparation now probes Python readiness, attempts managed-runtime repair via the bundled CPython installer, and falls back to a ready local Python runtime only when managed Python remains unavailable. Module dependencies and setup markers are still written under `Data/Python/modules/PersonaLiveView`.
+- Reworked model bootstrap to avoid `urllib` dependency and fetch detector assets through `curl`, while preserving the existing LivePortrait snapshot download path.
+- Added explicit `/api/session` gating until one-time setup completes, with first-run install flow driven by `/api/voxta/install` and native chat notification messaging.
+- Verified against the reported clean-install path and prepared path: 20 native checks pass in both, plus 14 Python tests and browser activation regression checks.

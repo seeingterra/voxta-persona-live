@@ -54,7 +54,7 @@ public sealed class RendererHost : IAsyncDisposable
             var config=settings ?? throw new InvalidOperationException("Enable Persona Live View in Voxta Services.");
             if(sessions.IsEmpty)throw new InvalidOperationException("Select Live view in chat augmentations and start the chat. If Voxta cannot start it, resolve the chat error first.");
             if(process is {HasExited:false})return;
-            var python=ResolvePython();
+            var python=await ResolvePythonAsync(cancellation);
             if(!File.Exists(python))throw new FileNotFoundException("Voxta's managed Python was not found. Reinstall or repair Voxta, then restart Persona Live View.");
             await ExtractRuntimePayloadAsync(cancellation);
             await PrepareRuntimeAsync(python,cancellation);
@@ -67,6 +67,8 @@ public sealed class RendererHost : IAsyncDisposable
             foreach(var arg in new[]{"-m","uvicorn","backend.live_module:app","--host","127.0.0.1","--port",config.Port.ToString(),"--no-access-log"})info.ArgumentList.Add(arg);
             info.Environment["PERSONA_MODULE_TOKEN"]=Token;
             info.Environment["PERSONA_DATA"]=Path.Combine(ContentRoot,"data");
+            info.Environment["PERSONA_MODULE_ROOT"]=Path.Combine(Root,"Data","Python","modules","PersonaLiveView");
+            info.Environment["PERSONA_MODULE_SITE_PACKAGES"]=Path.Combine(Root,"Data","Python","modules","PersonaLiveView","site-packages");
             info.Environment["PERSONA_VISUAL_PYTHON"]=python;
             info.Environment["PERSONA_VOXTA_URL"]=config.VoxtaUrl.TrimEnd('/');
             info.Environment["PERSONA_LIVE_DEVICE"]=config.Device;
@@ -102,25 +104,113 @@ public sealed class RendererHost : IAsyncDisposable
         await gate.WaitAsync(cancellation);
         try
         {
-            var python=ResolvePython();
-            if(!File.Exists(python))throw new FileNotFoundException("Voxta's managed Python was not found. Reinstall or repair Voxta, then restart Persona Live View.");
+            var python=await ResolvePythonAsync(cancellation);
+            if(!File.Exists(python))throw new FileNotFoundException("No compatible Python runtime was found.");
             await ExtractRuntimePayloadAsync(cancellation);
             await PrepareRuntimeAsync(python,cancellation);
         }
         finally { gate.Release(); }
     }
-    private string ResolvePython()
+    private string? FindManagedPython()
     {
         var pythonRoot=Path.Combine(Root,"Data","Python");
-        var managed=Directory.Exists(pythonRoot)
+        return Directory.Exists(pythonRoot)
             ? Directory.EnumerateDirectories(pythonRoot,"python-*-amd64")
                 .OrderByDescending(folder=>folder,StringComparer.OrdinalIgnoreCase)
                 .Select(folder=>Path.Combine(folder,"python.exe"))
                 .FirstOrDefault(File.Exists)
             : null;
-        if(managed is null) return Path.Combine(pythonRoot,"python.exe");
-        logger.LogInformation("Using Voxta managed Python at {Python}.",managed);
-        return managed;
+    }
+    private async Task<string> ResolvePythonAsync(CancellationToken cancellation)
+    {
+        var managed=FindManagedPython();
+        if(managed is not null && await IsPythonRuntimeReadyAsync(managed,cancellation))
+        {
+            logger.LogInformation("Using Voxta managed Python at {Python}.",managed);
+            return managed;
+        }
+        if(managed is not null)
+        {
+            logger.LogWarning("Voxta managed Python at {Python} is not yet ready for module setup. Attempting runtime repair.",managed);
+            await TryInstallManagedPythonAsync(managed,cancellation);
+            if(await IsPythonRuntimeReadyAsync(managed,cancellation))
+            {
+                logger.LogInformation("Voxta managed Python runtime repaired at {Python}.",managed);
+                return managed;
+            }
+        }
+        var user=FindUserPython313();
+        if(user is not null && await IsPythonRuntimeReadyAsync(user,cancellation))
+        {
+            logger.LogWarning("Using fallback Python runtime at {Python} because Voxta managed Python is unavailable.",user);
+            return user;
+        }
+        throw new FileNotFoundException("No compatible Python runtime is ready. Let Voxta finish its Python setup, then retry Start animation.");
+    }
+    private static string? FindUserPython313()
+    {
+        var local=Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var root=Path.Combine(local,"Programs","Python");
+        if(!Directory.Exists(root)) return null;
+        return Directory.EnumerateDirectories(root,"Python3*")
+            .OrderByDescending(path=>path,StringComparer.OrdinalIgnoreCase)
+            .Select(path=>Path.Combine(path,"python.exe"))
+            .FirstOrDefault(File.Exists);
+    }
+    private async Task<bool> IsPythonRuntimeReadyAsync(string python,CancellationToken cancellation)
+    {
+        try
+        {
+            var info=new ProcessStartInfo(python)
+            {
+                UseShellExecute=false,
+                CreateNoWindow=true,
+                RedirectStandardError=true,
+                RedirectStandardOutput=true
+            };
+            info.Environment.Remove("PYTHONHOME");
+            info.Environment.Remove("PYTHONPATH");
+            info.ArgumentList.Add("-c");
+            info.ArgumentList.Add("import urllib,sysconfig,pip");
+            using var probe=Process.Start(info);
+            if(probe is null) return false;
+            using var timeout=CancellationTokenSource.CreateLinkedTokenSource(cancellation);
+            timeout.CancelAfter(TimeSpan.FromSeconds(10));
+            await probe.WaitForExitAsync(timeout.Token);
+            return probe.ExitCode==0;
+        }
+        catch(OperationCanceledException) when(!cancellation.IsCancellationRequested)
+        {
+            return false;
+        }
+        catch(OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+    private async Task TryInstallManagedPythonAsync(string managedPython,CancellationToken cancellation)
+    {
+        var pythonHome=Path.GetDirectoryName(managedPython)!;
+        var installer=Directory.EnumerateFiles(pythonHome,"python-*-amd64.exe").OrderByDescending(Path.GetFileName,StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+        if(installer is null) return;
+        var logPath=Path.Combine(Root,"Data","LiveView","data","logs","python-installer.log");
+        Directory.CreateDirectory(Path.GetDirectoryName(logPath)!);
+        var info=new ProcessStartInfo(installer)
+        {
+            UseShellExecute=false,
+            CreateNoWindow=true
+        };
+        foreach(var arg in new[]{"/quiet","InstallAllUsers=0","Include_pip=1","Include_lib=1","Include_exe=1","Include_launcher=0","Shortcuts=0",$"/log {logPath}"})
+            info.ArgumentList.Add(arg);
+        using var process=Process.Start(info) ?? throw new InvalidOperationException("Voxta Python installer could not start.");
+        await process.WaitForExitAsync(cancellation);
+        if(process.ExitCode==1618) throw new InvalidOperationException("Voxta Python setup is already running. Wait a moment and try Start animation again.");
+        if(process.ExitCode!=0 && process.ExitCode!=3010)
+            throw new InvalidOperationException($"Voxta Python installer failed with exit code {process.ExitCode}. See Data/LiveView/data/logs/python-installer.log.");
     }
     private async Task ExtractRuntimePayloadAsync(CancellationToken cancellation)
     {
@@ -145,6 +235,8 @@ public sealed class RendererHost : IAsyncDisposable
         info.Environment.Remove("PYTHONHOME");
         info.Environment.Remove("PYTHONPATH");
         info.Environment["PERSONA_DATA"]=Path.Combine(ContentRoot,"data");
+        info.Environment["PERSONA_MODULE_ROOT"]=Path.Combine(Root,"Data","Python","modules","PersonaLiveView");
+        info.Environment["PERSONA_MODULE_SITE_PACKAGES"]=Path.Combine(Root,"Data","Python","modules","PersonaLiveView","site-packages");
         info.ArgumentList.Add("-m");
         info.ArgumentList.Add("backend.live_bootstrap");
         using var setup=Process.Start(info) ?? throw new InvalidOperationException("Live View runtime setup could not start.");

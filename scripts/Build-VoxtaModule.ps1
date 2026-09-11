@@ -1,7 +1,7 @@
 param([string]$OutputPath)
 $ErrorActionPreference='Stop'
 $workspace=Split-Path $PSScriptRoot -Parent
-if(!$OutputPath){$OutputPath=Join-Path $workspace 'artifacts\PersonaLiveView-0.5.1'}
+if(!$OutputPath){$OutputPath=Join-Path $workspace 'artifacts\PersonaLiveView-0.5.2'}
 $package=[IO.Path]::GetFullPath($OutputPath)
 & dotnet build (Join-Path $workspace 'module\Voxta.Modules.LiveView') -c Release
 if($LASTEXITCODE -ne 0){throw 'Module build failed'}

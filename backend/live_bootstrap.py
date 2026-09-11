@@ -7,18 +7,16 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-from urllib.request import urlretrieve
-
-from huggingface_hub import snapshot_download
 
 
 DATA = Path(os.environ["PERSONA_DATA"]).resolve()
 PYTHON_ROOT = Path(sys.executable).resolve().parent.parent
-MODULE_ROOT = PYTHON_ROOT / "modules" / "PersonaLiveView"
-SITE_PACKAGES = MODULE_ROOT / "site-packages"
+MODULE_ROOT = Path(os.environ.get("PERSONA_MODULE_ROOT", PYTHON_ROOT / "modules" / "PersonaLiveView")).resolve()
+SITE_PACKAGES = Path(os.environ.get("PERSONA_MODULE_SITE_PACKAGES", MODULE_ROOT / "site-packages")).resolve()
 MARKER = MODULE_ROOT / "bootstrap.json"
 
 REQUIREMENTS = [
+    "huggingface-hub>=1.28,<2",
     "fastapi>=0.141,<0.142",
     "uvicorn>=0.52,<0.53",
     "python-multipart>=0.0.32,<0.0.33",
@@ -110,6 +108,10 @@ def _install_dependencies() -> None:
 
 
 def _install_models() -> None:
+    if str(SITE_PACKAGES) not in sys.path:
+        sys.path.insert(0, str(SITE_PACKAGES))
+    from huggingface_hub import snapshot_download
+
     if _models_ready():
         return
     portrait = DATA / "models" / "portrait"
@@ -127,10 +129,10 @@ def _install_models() -> None:
     )
     detector = DATA / "models" / "portrait_detector"
     detector.mkdir(parents=True, exist_ok=True)
-    for relative, url in DETECTOR_FILES.items():
+    for relative, source in DETECTOR_FILES.items():
         destination = detector / relative
         if not destination.is_file():
-            urlretrieve(url, destination)
+            subprocess.run(["curl", "--fail", "--location", "--output", str(destination), source], check=True)
     _receipt(
         detector,
         "opencv/opencv_zoo",

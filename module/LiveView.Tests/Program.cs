@@ -50,6 +50,11 @@ try
     {
         Check((await client.GetStringAsync($"/persona-live-view/api/voxta/module-state?sessionId={sessionId}")).Contains("\"active\":true"),"selected chat reports activation to its stage");
         Check((await client.GetStringAsync($"/persona-live-view/api/voxta/module-state?sessionId={Guid.NewGuid()}")).Contains("\"active\":false"),"activation is scoped to the correct chat");
+        using(var installResponse=await client.PostAsync("/persona-live-view/api/voxta/install",null))
+        {
+            var installBody=await installResponse.Content.ReadAsStringAsync();
+            Check(installResponse.IsSuccessStatusCode && installBody.Contains("\"ready\":true"),"one-time install endpoint prepares runtime: "+installBody);
+        }
         var tokenResponse=await client.GetAsync("/persona-live-view/api/session");
         var body=await tokenResponse.Content.ReadAsStringAsync();
         Check(tokenResponse.IsSuccessStatusCode && body.Contains("token"),"Voxta module starts isolated renderer on demand: "+(tokenResponse.IsSuccessStatusCode?"ready":body));

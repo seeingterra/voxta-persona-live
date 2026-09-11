@@ -108,6 +108,12 @@ public sealed class LiveViewStartup(RendererHost renderer) : IStartupFilter
                 if(c.Request.Method!="GET"){c.Response.StatusCode=405;return;}
                 await c.Response.WriteAsJsonAsync(new {ready=renderer.IsPrepared});return;
             }
+            if(path=="/api/session" && !renderer.IsPrepared)
+            {
+                c.Response.StatusCode=503;
+                await c.Response.WriteAsJsonAsync(new {detail="Live View setup is required. Use Start animation to run the one-time installer."});
+                return;
+            }
             await renderer.EnsureStartedAsync(c.RequestAborted);
             if(live)
             {
