@@ -35,7 +35,7 @@ async def module_only(request:Request,call_next):
     if not secrets.compare_digest(request.headers.get('x-persona-module',''),app.state.live_token):
         return JSONResponse({'detail':'Module authorization required'},status_code=403)
     path=request.url.path
-    allowed=(path in {'/api/session','/health','/api/voxta/status','/api/voxta/native-reference'}
+    allowed=(path in {'/api/session','/health','/api/voxta/status','/api/voxta/hardware','/api/voxta/usage','/api/voxta/native-reference'}
              or path.startswith('/api/voxta/matte/'))
     if not allowed:return JSONResponse({'detail':'Not a Live View endpoint'},status_code=404)
     try:length=int(request.headers.get('content-length','0') or 0)

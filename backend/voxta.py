@@ -71,6 +71,16 @@ async def status():
     except httpx.HTTPError:return {'connected':False,'url':BASE,'modules':[],'message':'Start Voxta.Server.exe in the Voxta folder.'}
 
 
+@router.get('/hardware')
+def hardware():
+    return detect()
+
+
+@router.get('/usage')
+def usage():
+    return live.usage()
+
+
 @router.get('/characters')
 async def characters():
     records=(await get('/api/characters/'))['characters'];saved=bindings()
@@ -254,6 +264,9 @@ async def bridge(socket:WebSocket):
 async def frames(socket:WebSocket,image_id:str):
     if not await authorize(socket):return
     if live_session.locked():await socket.send_json({'error':'Another live portrait is already open.'});await socket.close();return
+    requested_device=socket.query_params.get('device','auto')
+    if requested_device!='auto' and requested_device!='cpu' and requested_device not in {gpu['uuid'] for gpu in detect()['gpus']}:
+        await socket.send_json({'error':'The selected graphics processor is no longer available.'});await socket.close();return
     controls={'full_frame':True,'image_id':image_id,'mouth':0.,'gaze':[0.,0.],'emotion':'neutral','state':'idle','motion':[0.,0.,0.],'presence':'normal'}
     async with live_session:
         try:
@@ -261,7 +274,7 @@ async def frames(socket:WebSocket,image_id:str):
             if path.suffix!='.png':raise ValueError('Use a portrait image')
             if not live.process:
                 # Prefer the smaller suitable GPU, leaving the largest card for Voxta.
-                device=os.getenv('PERSONA_LIVE_DEVICE','auto')
+                device=requested_device if requested_device!='auto' else os.getenv('PERSONA_LIVE_DEVICE','auto')
                 live.device=select_live_device(detect()['gpus']) if device=='auto' else device
             async def receive():
                 while True:

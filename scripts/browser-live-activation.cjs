@@ -14,8 +14,10 @@ await page.route('**/persona-live-view/api/voxta/install-status',r=>r.fulfill({j
 await page.route('**/persona-live-view/api/voxta/install',r=>r.fulfill({json:{ready:true}}));
 await page.route('**/persona-live-view/api/session',r=>r.fulfill({status:block?503:200,json:block?{detail:block}:{token:'fixture'}}));
 await page.route('**/persona-live-view/api/voxta/status',r=>r.fulfill({json:{connected:true}}));
+await page.route('**/persona-live-view/api/voxta/hardware',r=>r.fulfill({json:{gpus:[{index:0,name:'NVIDIA GeForce RTX 4080',uuid:'GPU-card-a',total_mb:16376},{index:1,name:'NVIDIA GeForce RTX 3070',uuid:'GPU-card-b',total_mb:8192}]}}));
+await page.route('**/persona-live-view/api/voxta/usage',r=>r.fulfill({json:{running:true,cpu_percent:12.5,memory_mb:1536}}));
 await page.route('**/persona-live-view/api/voxta/native-reference',r=>r.fulfill({json:{image_id:(r.request().postDataJSON().path.includes('happy')?'b':'a').repeat(32)}}));
-await page.addInitScript(()=>{window.WebSocket=class{static OPEN=1;readyState=1;constructor(){this.timer=setInterval(async()=>{const n=this.n=(this.n||0)+1;const c=document.createElement('canvas');c.width=c.height=n===1?16:8;c.getContext('2d').fillStyle=this.id?.startsWith('b')?'blue':'red';c.getContext('2d').fillRect(0,0,16,16);this.onmessage?.({data:JSON.stringify({image_id:this.id||'a'.repeat(32),content_type:'image/png',transparent:true,alpha_embedded:true,patch:n===1?null:{x:4,y:4,width:8,height:8,canvas_width:16,canvas_height:16},render_ms:5,neural_ms:3,compose_ms:1,encode_ms:1,compiled:true})});const blob=await new Promise(r=>c.toBlob(r));this.onmessage?.({data:await blob.arrayBuffer()});},50);}send(raw){const v=JSON.parse(raw);(window.liveRequests??=[]).push(v);if(v.image_id!==this.id){this.id=v.image_id;this.n=0;}}close(){clearInterval(this.timer);this.readyState=3;this.onclose?.();}}});
+await page.addInitScript(()=>{window.WebSocket=class{static OPEN=1;readyState=1;constructor(url){(window.liveSocketUrls??=[]).push(url);this.timer=setInterval(async()=>{const n=this.n=(this.n||0)+1;const c=document.createElement('canvas');c.width=c.height=n===1?16:8;c.getContext('2d').fillStyle=this.id?.startsWith('b')?'blue':'red';c.getContext('2d').fillRect(0,0,16,16);this.onmessage?.({data:JSON.stringify({image_id:this.id||'a'.repeat(32),content_type:'image/png',transparent:true,alpha_embedded:true,patch:n===1?null:{x:4,y:4,width:8,height:8,canvas_width:16,canvas_height:16},render_ms:5,neural_ms:3,compose_ms:1,encode_ms:1,compiled:true})});const blob=await new Promise(r=>c.toBlob(r));this.onmessage?.({data:await blob.arrayBuffer()});},50);}send(raw){const v=JSON.parse(raw);(window.liveRequests??=[]).push(v);if(v.image_id!==this.id){this.id=v.image_id;this.n=0;}}close(){clearInterval(this.timer);this.readyState=3;this.onclose?.();}}});
 await page.goto('http://localhost:5384/live-activation-test');await page.waitForFunction(()=>window.__personaLiveView?.frames>=3);
 if(!await page.evaluate(()=>window.notifications?.some(notification=>notification.tag==='persona-live-view-install')))throw Error('Clean installation notification was not shown');
 if(await page.evaluate(()=>new Set(window.audioBuffers).size)!==1)throw Error('Audio samples were reallocated between control ticks');
@@ -34,6 +36,11 @@ await page.waitForFunction(()=>window.liveRequests?.some(request=>request.qualit
 await page.getByLabel('Render quality').selectOption('quality');
 await page.waitForFunction(()=>window.liveRequests?.some(request=>request.quality==='quality'));
 console.log('PASS Ultra fast is opt-in and Full detail can be restored');
+if(await page.getByLabel('Graphics processor (this chat)').inputValue()!=='auto')throw Error('Automatic GPU selection is not the default');
+await page.getByLabel('Graphics processor (this chat)').selectOption('GPU-card-b');
+await page.waitForFunction(()=>window.liveSocketUrls?.some(url=>url.includes('device=GPU-card-b')));
+await page.waitForFunction(()=>document.querySelector('[role=status]')?.textContent.includes('CPU 13%')&&document.querySelector('[role=status]')?.textContent.includes('RAM 1.5 GB'));
+console.log('PASS in-chat GPU selection forwards the selected card and shows resource usage');
 if(await page.getByLabel('Character presence').inputValue()!=='normal')throw Error('Normal Presence is not the default');
 await page.getByLabel('Character presence').selectOption('advanced');
 await page.waitForFunction(()=>document.querySelector('.persona-live-layer')?.dataset.presence==='advanced');

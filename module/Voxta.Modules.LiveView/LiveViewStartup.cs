@@ -121,7 +121,8 @@ public sealed class LiveViewStartup(RendererHost renderer) : IStartupFilter
                 using var upstream=new ClientWebSocket();
                 upstream.Options.Proxy=null;
                 upstream.Options.SetRequestHeader("Origin",renderer.Origin);
-                await upstream.ConnectAsync(new Uri($"ws://127.0.0.1:{renderer.Port}{path}?token={renderer.Token}"),c.RequestAborted);
+                var device=Uri.EscapeDataString(c.Request.Query["device"].ToString());
+                await upstream.ConnectAsync(new Uri($"ws://127.0.0.1:{renderer.Port}{path}?token={renderer.Token}&device={device}"),c.RequestAborted);
                 using var downstream=await c.WebSockets.AcceptWebSocketAsync();
                 using var cancel=CancellationTokenSource.CreateLinkedTokenSource(c.RequestAborted);
                 var a=Relay(upstream,downstream,cancel.Token);var b=Relay(downstream,upstream,cancel.Token);

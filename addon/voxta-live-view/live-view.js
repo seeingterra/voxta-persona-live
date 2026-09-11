@@ -9,7 +9,7 @@
   const notifier=Object.values(notificationExports).find(value=>typeof value?.notify==='function');
   if(typeof store?.getAvatarUrl!=='function'||typeof store?.chat!=='function')throw Error('Voxta Live View adapter needs updating for this Voxta version.');
   const style=document.createElement('link');style.rel='stylesheet';style.crossOrigin='anonymous';style.href=root+'live-view.css';document.head.append(style);
-  let enabled=false,ws=null,host=null,layer=null,canvas=null,token='',selected='',imageId='',loading='',generation=0,decoding=false,analyser=null,audioSamples=null,header=null,lastImage='',oldFrame=null,blendAt=0,frames=0,lastTime=performance.now(),fps=0,installed=false;
+  let enabled=false,ws=null,host=null,layer=null,canvas=null,token='',selected='',imageId='',loading='',generation=0,decoding=false,analyser=null,audioSamples=null,header=null,lastImage='',oldFrame=null,blendAt=0,frames=0,lastTime=performance.now(),fps=0,installed=false,resource=null,usagePending=false,lastUsage=0;
   const masks=new Map();const cache=new Map(),gaze=[0,0],head=[0,0,0];let motion=null,motionKey='',motionStart=0;
   const bar=document.createElement('div');bar.id='persona-live-controls';
   const title=document.createElement('div');title.className='persona-live-title';title.textContent='Persona Live View';
@@ -38,6 +38,7 @@
   optionsToggle.onclick=()=>{const expanded=options.hidden;options.hidden=!expanded;optionsToggle.setAttribute('aria-expanded',String(expanded));optionsToggle.textContent=expanded?'Hide options':'Options';};
   function choice(label,items){const row=document.createElement('label');row.className='persona-live-option';row.textContent=label;const select=document.createElement('select');select.setAttribute('aria-label',label);for(const [value,text] of items){const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option);}row.append(select);options.append(row);return select;}
   const quality=choice('Render quality',[['quality','Full detail'],['fast','Faster rendering'],['ultra','Ultra fast (lower face detail)']]);
+  const gpu=choice('Graphics processor (this chat)',[['auto','Automatic — choose a suitable GPU'],['cpu','CPU — no GPU memory']]);
   const presence=choice('Character presence',[['normal','Normal Presence'],['advanced','Advanced Presence (beta)']]);
   const visualStyle=choice('Character style',[['auto','Style: automatic (name hints)'],['realistic','Realistic'],['stylized','Stylized']]);
   const sourceMouth=choice('Mouth in source picture',[['auto','Source mouth: automatic'],['.02','Source mouth: closed'],['.12','Source mouth: slightly open'],['.25','Source mouth: open']]);
@@ -48,6 +49,9 @@
   function notify(level,message,details,tag){notifier?.notify({level,message,details,tag});}
   async function api(path,body){if(!token){const response=await fetch(BASE+'/api/session');const value=await response.json().catch(()=>({}));if(!response.ok)throw Error(value.detail||'Live View could not start. Check its settings in Voxta Services.');token=value.token;}
     const r=await fetch(BASE+'/api/voxta/'+path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json','X-Persona-Token':token}:{},body:body?JSON.stringify(body):undefined});if(!r.ok){const e=await r.json().catch(()=>({}));throw Error(e.detail||'Live View renderer unavailable.');}return r.json();}
+  async function loadGpus(){const selectedGpu=gpu.value,value=await api('hardware'),choices=[['auto','Automatic — choose a suitable GPU'],['cpu','CPU — no GPU memory'],...(value.gpus||[]).map(card=>[card.uuid,`GPU ${card.index}: ${card.name} · ${(card.total_mb/1024).toFixed(1)} GB`])];if(!choices.some(([value])=>value===selectedGpu))choices.push([selectedGpu,`Previously selected GPU — unavailable (${selectedGpu})`]);gpu.replaceChildren();for(const [value,text] of choices){const option=document.createElement('option');option.value=value;option.textContent=text;gpu.append(option);}gpu.value=selectedGpu;}
+  function updateLiveStatus(){if(!enabled)return;const details=[];if(resource?.running){if(resource.cpu_percent!==null&&resource.cpu_percent!==undefined)details.push(`CPU ${resource.cpu_percent.toFixed(0)}%`);if(resource.memory_mb!==undefined)details.push(`RAM ${(resource.memory_mb/1024).toFixed(resource.memory_mb>=1024?1:0)} ${resource.memory_mb>=1024?'GB':'MB'}`);}status.textContent=`Live · ${fps<1?fps.toFixed(1):fps.toFixed(0)} fps${details.length?' · '+details.join(' · '):''}`;}
+  async function refreshUsage(){const now=performance.now();if(!enabled||usagePending||now-lastUsage<1000)return;usagePending=true;lastUsage=now;try{resource=await api('usage');updateLiveStatus();}catch{}finally{usagePending=false;}}
   function updateDisplayToggle(){
     displayDetail.textContent=active?'Animated character portrait':'Enable Live view in chat augmentations';
     displayToggle.classList.toggle('persona-live-display-disabled',!active);
@@ -62,7 +66,7 @@
     }
     updateDisplayToggle();
   }
-  function stop(){generation++;enabled=false;starting=false;state.enabled=false;state.preparing=false;if(ws){ws.onclose=null;ws.close();}ws=null;imageId='';loading='';selected='';lastImage='';oldFrame=null;frameBuffer=null;cancelAnimationFrame(paintRequest);host?.classList.remove('persona-live-active','persona-live-positioned');layer?.remove();layer=null;canvas=null;toggle.textContent='Start animation';toggle.setAttribute('aria-pressed','false');status.textContent='Animation paused';updateDisplayToggle();}
+  function stop(){generation++;enabled=false;starting=false;state.enabled=false;state.preparing=false;resource=null;if(ws){ws.onclose=null;ws.close();}ws=null;imageId='';loading='';selected='';lastImage='';oldFrame=null;frameBuffer=null;cancelAnimationFrame(paintRequest);host?.classList.remove('persona-live-active','persona-live-positioned');layer?.remove();layer=null;canvas=null;toggle.textContent='Start animation';toggle.setAttribute('aria-pressed','false');status.textContent='Animation paused';updateDisplayToggle();}
   function fail(e){state.error=String(e.message||e);paused=true;stop();status.textContent=state.error;}
   function attach(target){if(host===target&&layer?.isConnected)return;host?.classList.remove('persona-live-active','persona-live-positioned');layer?.remove();host=target;if(getComputedStyle(host).position==='static')host.classList.add('persona-live-positioned');layer=document.createElement('div');layer.className='persona-live-layer';canvas=document.createElement('canvas');canvas.setAttribute('aria-label','Voxta live character');layer.append(canvas);host.append(layer);if(frameBuffer){canvas.width=frameBuffer.width;canvas.height=frameBuffer.height;paint();host.classList.add('persona-live-active');layer.style.opacity='1';}else awaitingFull=true;host.addEventListener('pointerleave',()=>{gaze[0]=0;gaze[1]=0;},{signal:life.signal});host.addEventListener('pointermove',e=>{const r=host.getBoundingClientRect();gaze[0]=(e.clientX-r.left)/r.width*2-1;gaze[1]=(e.clientY-r.top)/r.height*2-1;},{signal:life.signal});}
   function paint(){
@@ -79,11 +83,12 @@
   }
   const life=new AbortController();
   async function install(){if(installed)return;status.textContent='Installing Live View…';const response=await fetch(BASE+'/api/voxta/install',{method:'POST'}),value=await response.json().catch(()=>({}));if(!response.ok)throw Error(value.detail||'Live View installation failed. Check Voxta Services and try again.');installed=true;}
-  async function start(){if(enabled||starting||!active)return;starting=true;state.preparing=true;state.error='';const epoch=generation;toggle.textContent='Cancel animation';status.textContent='Starting animation…';try{await install();if(epoch!==generation)return;await api('status');if(epoch!==generation)return;enabled=true;state.enabled=true;toggle.textContent='Pause animation';toggle.setAttribute('aria-pressed','true');status.textContent='Preparing character image…';frames=0;lastTime=performance.now();updateDisplayToggle();
+  async function start(){if(enabled||starting||!active)return;starting=true;state.preparing=true;state.error='';const epoch=generation;toggle.textContent='Cancel animation';status.textContent='Starting animation…';try{await install();if(epoch!==generation)return;await api('status');try{await loadGpus();}catch{}if(epoch!==generation)return;enabled=true;state.enabled=true;toggle.textContent='Pause animation';toggle.setAttribute('aria-pressed','true');status.textContent='Preparing character image…';frames=0;lastTime=performance.now();updateDisplayToggle();
     // Reading Voxta's analyser must never block animation or change voice settings.
     try{void Promise.resolve(audio()?.getAnalyser?.()).then(value=>{if(epoch===generation){analyser=value;audioSamples=null;}}).catch(()=>{});}catch{}
   }catch(e){if(epoch===generation)fail(e);}finally{if(epoch===generation){starting=false;state.preparing=false;}}}
   toggle.onclick=()=>{if(enabled||starting){paused=true;stop();return;}paused=false;void start();};
+  gpu.onchange=()=>{if(!enabled)return;paused=false;stop();void start();};
   function toggleFromDisplay(){if(!active)return;if(enabled||starting){paused=true;stop();return;}paused=false;void start();}
   displayToggle.onclick=toggleFromDisplay;
   displayToggle.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleFromDisplay();}};
@@ -92,7 +97,7 @@
     const child=candidates.at(-1)||target;const match=child.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/);return match?.[1]||target.querySelector('video')?.currentSrc||'';}
   function characterState(){const id=store.speakingMessageId(),generating=store.generating();const label=decodeURIComponent(selected).toLowerCase();const map={angry:'angry',happy:'warm',smile:'warm',excited:'excited',sad:'sad',surpris:'surprised',fear:'afraid',disgust:'disgusted',calm:'calm'};const mood=Object.keys(map).find(k=>label.includes(k));return {emotion:mood?map[mood]:'neutral',state:id?'speaking':generating?'thinking':label.includes('listening')?'listening':'idle'};}
   async function reference(url){if(loading===url)return;loading=url;const epoch=generation;try{let binding=cache.get(url);if(!binding){let source={path:url};if(url.startsWith('blob:')||url.startsWith('data:')){const blob=await fetch(url).then(r=>r.blob());if(blob.size>24*1024*1024)throw Error('Voxta image is too large');const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});source={image_data:data};}binding=await api('native-reference',source);cache.set(url,binding);}if(epoch!==generation||!enabled||selected!==url)return;imageId=binding.image_id;state.source=url;
-      if(!ws){ws=new WebSocket(BASE.replace('http:','ws:')+'/api/voxta/live/'+imageId+'?token='+encodeURIComponent(token));ws.binaryType='arraybuffer';
+      if(!ws){ws=new WebSocket(BASE.replace('http:','ws:')+'/api/voxta/live/'+imageId+'?token='+encodeURIComponent(token)+'&device='+encodeURIComponent(gpu.value));ws.binaryType='arraybuffer';
         ws.onmessage=async e=>{if(typeof e.data==='string'){const value=JSON.parse(e.data);if(value.error){fail(Error(value.error));return;}header=value;state.mouthDetected=value.mouth_detected;state.sourceLip=value.source_lip;state.renderMs=value.render_ms;state.neuralMs=value.neural_ms;state.composeMs=value.compose_ms;state.encodeMs=value.encode_ms;state.accelerated=value.accelerated;state.compiled=value.compiled;state.device=value.device;return;}if(decoding||!canvas)return;decoding=true;const frameHeader=header;
           try{if(frameHeader?.image_id!==imageId)return;if(frameHeader?.patch&&(lastImage!==frameHeader.image_id||canvas.width!==frameHeader.patch.canvas_width||canvas.height!==frameHeader.patch.canvas_height)){awaitingFull=true;return;}if(!frameHeader?.patch)awaitingFull=false;let mask=null;if(frameHeader?.transparent&&!frameHeader?.alpha_embedded){if(!masks.has(frameHeader.image_id))masks.set(frameHeader.image_id,fetch(BASE+'/api/voxta/matte/'+frameHeader.image_id).then(r=>{if(!r.ok)throw Error('Could not load character transparency');return r.blob();}).then(blob=>createImageBitmap(blob)));if(masks.size>4){const key=masks.keys().next().value;void masks.get(key).then(m=>m.close()).catch(()=>{});masks.delete(key);}mask=await masks.get(frameHeader.image_id);}const bitmap=await createImageBitmap(new Blob([e.data],{type:frameHeader?.content_type||'image/jpeg'}));if(epoch!==generation||!enabled||!canvas||frameHeader?.image_id!==imageId){bitmap.close();return;}
             if(lastImage&&frameHeader?.image_id!==lastImage){oldFrame=document.createElement('canvas');oldFrame.width=canvas.width;oldFrame.height=canvas.height;oldFrame.getContext('2d').drawImage(canvas,0,0);blendAt=performance.now();}
@@ -105,7 +110,7 @@
             ctx.drawImage(bitmap,region?.x||0,region?.y||0);bitmap.close();
             if(mask){ctx.globalCompositeOperation='destination-in';ctx.drawImage(mask,0,0,frameBuffer.width,frameBuffer.height);ctx.globalCompositeOperation='source-over';}
             cancelAnimationFrame(paintRequest);paint();
-            host.classList.add('persona-live-active');layer.style.opacity='1';layer.style.background=frameHeader?.transparent?'transparent':'#181d21';layer.classList.toggle('persona-live-cutout',!!frameHeader?.transparent);frames++;state.frames++;const now=performance.now();if(now-lastTime>1000){fps=frames*1000/(now-lastTime);frames=0;lastTime=now;state.fps=fps;status.textContent=`Live · ${fps<1?fps.toFixed(1):fps.toFixed(0)} fps`;}
+            host.classList.add('persona-live-active');layer.style.opacity='1';layer.style.background=frameHeader?.transparent?'transparent':'#181d21';layer.classList.toggle('persona-live-cutout',!!frameHeader?.transparent);frames++;state.frames++;const now=performance.now();if(now-lastTime>1000){fps=frames*1000/(now-lastTime);frames=0;lastTime=now;state.fps=fps;updateLiveStatus();}
           }catch(e){fail(e);}finally{decoding=false;}};
         ws.onerror=()=>fail(Error('Animation connection failed. Check Live View settings in Voxta Services.'));ws.onclose=()=>{if(enabled)fail(Error('Animation disconnected. Press Start animation to retry.'));};
       }
@@ -120,7 +125,7 @@
     const barHost=target.closest('[class*="stage-view"]')||target.closest('[class*="avatar-constraint"]')?.parentElement||target.closest('[role="button"]')?.parentElement||target.parentElement;
     if(!barHost)return;
     bar.dataset.stage=String(barHost!==target.parentElement);if(!bar.isConnected||bar.parentElement!==barHost)barHost.append(bar);attachDisplayToggle();
-    if(!enabled)return;attach(target);const url=sourceIn(target);
+    if(!enabled)return;void refreshUsage();attach(target);const url=sourceIn(target);
     if(/\.(mp4|webm)(?:[?&#]|$)/i.test(decodeURIComponent(url))){if(ws){ws.onclose=null;ws.close();ws=null;}imageId='';host.classList.remove('persona-live-active','persona-live-positioned');layer.style.opacity='0';selected=url;status.textContent='Playing character video';return;}
     if(!url){status.textContent='Waiting for the character image…';return;}
     if(url&&url!==selected){selected=url;void reference(url);}

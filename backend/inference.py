@@ -2,16 +2,17 @@ import asyncio
 import json
 import os
 import sys
+import time
 from .storage import ROOT, DATA
 from .live_models import ready, verify
 
 class Worker:
     def __init__(self,stage,device='cpu',python=None,module='backend.worker',timeout=240):
-        self.stage=stage;self.device=device;self.process=None;self.lock=asyncio.Lock();self.log=None
+        self.stage=stage;self.device=device;self.process=None;self.lock=asyncio.Lock();self.log=None;self.usage_sample=None
         self.python=python or sys.executable;self.module=module;self.timeout=timeout
 
     async def stop(self):
-        p=self.process;self.process=None
+        p=self.process;self.process=None;self.usage_sample=None
         if p and p.returncode is None:
             if sys.platform=='win32':
                 # Windows virtualenv launchers may own the actual CUDA process.
@@ -70,3 +71,19 @@ class Worker:
             except BaseException:
                 await self.stop()
                 raise
+
+    def usage(self):
+        """Return the resource use of the persistent renderer worker."""
+        p=self.process
+        if p is None or p.returncode is not None:return {'running':False}
+        import psutil
+        try:
+            process=psutil.Process(p.pid)
+            with process.oneshot():
+                memory_mb=round(process.memory_info().rss/1024/1024)
+                times=process.cpu_times()
+            now=time.monotonic();cpu_seconds=times.user+times.system
+            previous=self.usage_sample;self.usage_sample=(now,cpu_seconds)
+            cpu_percent=None if previous is None else round(max(0,(cpu_seconds-previous[1])/(now-previous[0])*100),1)
+            return {'running':True,'device':self.device,'cpu_percent':cpu_percent,'memory_mb':memory_mb}
+        except psutil.Error:return {'running':False}
