@@ -1,0 +1,11 @@
+{
+  "name": "voxta-live-view",
+  "version": "0.5.0",
+  "private": true,
+  "scripts": {
+    "test:browser": "node scripts/browser-live-activation.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}

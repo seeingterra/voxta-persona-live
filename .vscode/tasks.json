@@ -1,0 +1,80 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build module package",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "scripts/Build-VoxtaModule.ps1"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Test Python motion",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/Scripts/python.exe",
+      "args": [
+        "-m",
+        "pytest",
+        "tests",
+        "-q"
+      ],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test browser adapter",
+      "type": "shell",
+      "command": "npm run test:browser",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test native module (no GPU)",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "module/LiveView.Tests",
+        "--",
+        "${input:voxtaPath}"
+      ],
+      "group": "test",
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Install package into Voxta (close Voxta first)",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "artifacts/PersonaLiveView-0.4.4/Install.ps1",
+        "-VoxtaPath",
+        "${input:voxtaPath}"
+      ],
+      "dependsOn": "Build module package",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "voxtaPath",
+      "type": "promptString",
+      "description": "Existing Voxta installation directory",
+      "default": "J:\\CODEX\\compchat\\Voxta"
+    }
+  ]
+}

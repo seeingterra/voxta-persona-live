@@ -1,0 +1,35 @@
+name: Build module release
+
+on:
+  push:
+    branches: [release]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Build module package
+        shell: pwsh
+        run: ./scripts/Build-VoxtaModule.ps1
+      - name: Publish module artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PersonaLiveView
+          path: artifacts/PersonaLiveView-*/
+      - name: Create GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/PersonaLiveView-*/Voxta.Modules.LiveView.dll
+            artifacts/PersonaLiveView-*/PersonaLiveView-*.zip

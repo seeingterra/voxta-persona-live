@@ -1,0 +1,58 @@
+#persona-live-controls{position:absolute;z-index:8;top:58px;left:70px;width:min(14.5rem,calc(100% - 1rem));padding:.38rem;box-sizing:border-box;font:13px system-ui;background:rgba(27,31,35,.96);border:1px solid rgba(255,255,255,.1);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.28);color:#dbe2e6}
+.persona-live-title-row{display:flex;align-items:center;gap:.3rem}
+.persona-live-title{flex:1;padding:.1rem .15rem .42rem;color:#e7f9de;font-size:.77rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:grab;user-select:none}
+.persona-live-minimize{width:1.35rem;height:1.2rem;padding:0!important;border:0!important;background:transparent!important;color:#b8c2bc!important;font-size:1.05rem!important;line-height:1;cursor:pointer}
+.persona-live-minimize:hover{color:#e7f9de!important}
+.persona-live-minimized .persona-live-control-header,.persona-live-minimized .persona-live-options{display:none}
+.persona-live-dragging .persona-live-title{cursor:grabbing}
+.persona-live-control-header{display:grid;grid-template-columns:minmax(0,1fr);align-items:stretch;gap:.4rem}
+#persona-live-controls .persona-live-control-header>button,#persona-live-controls .persona-live-control-header>span{width:100%;box-sizing:border-box}
+#persona-live-controls .persona-live-control-header>span{padding:.08rem .15rem}
+#persona-live-controls button{border:1px solid #536059;border-radius:7px;background:#303a34;color:#e7f9de;padding:.42rem .62rem;cursor:pointer;font:inherit;white-space:nowrap}
+#persona-live-controls button[aria-pressed=true]{background:#b8e38b;color:#142017}
+#persona-live-controls button:hover{background:#3c4941}
+#persona-live-controls button:focus-visible,#persona-live-controls select:focus-visible{outline:2px solid #b8e38b;outline-offset:2px}
+#persona-live-controls span{min-width:0;color:#b8c2bc;font-size:12px;line-height:1.25;overflow-wrap:anywhere}
+.persona-live-options{display:grid;gap:.45rem;margin:.5rem .05rem .05rem;padding:.55rem .15rem .1rem;border-top:1px solid rgba(255,255,255,.1)}
+.persona-live-options[hidden]{display:none}
+.persona-live-display-toggle{display:flex;align-items:center;gap:.7rem;width:100%;box-sizing:border-box;padding:.6rem .75rem;border:0;border-radius:6px;background:transparent;color:inherit;cursor:pointer;text-align:left;font:inherit}
+.persona-live-display-toggle:hover{background:rgba(255,255,255,.06)}
+.persona-live-display-toggle:focus-visible{outline:2px solid #b8e38b;outline-offset:-2px}
+.persona-live-display-icon{width:1rem;color:#aeb9b1;font-size:1rem;text-align:center}
+.persona-live-display-body{display:grid;gap:.12rem;min-width:0;flex:1}
+.persona-live-display-body>div:first-child{color:#e6ece8;font-size:.88rem;font-weight:600}
+.persona-live-display-detail{color:#9aa79e;font-size:.76rem;line-height:1.2}
+.persona-live-display-switch{width:2rem;height:1.1rem;box-sizing:border-box;padding:.12rem;border-radius:999px;background:#59635d;transition:background .16s ease}
+.persona-live-display-switch[aria-checked=true]{background:#9dce70}
+.persona-live-display-knob{width:.86rem;height:.86rem;border-radius:50%;background:#f4f7f4;box-shadow:0 1px 2px rgba(0,0,0,.35);transition:transform .16s ease}
+.persona-live-display-switch[aria-checked=true] .persona-live-display-knob{transform:translateX(.9rem)}
+.persona-live-display-disabled{opacity:.5;cursor:not-allowed}
+.persona-live-option{display:grid;gap:.24rem;color:#cbd4ce;font-size:12px}
+#persona-live-controls select{min-width:0;width:100%;appearance:auto;border:1px solid #536059;border-radius:6px;background:#202722;color:#edf5ed;padding:.35rem .45rem;font:inherit}
+.persona-live-layer{position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0;transition:opacity .2s;background:#181d21;overflow:hidden;border-radius:inherit}
+.persona-live-layer canvas{height:100%;width:100%;object-fit:contain;display:block}
+
+#persona-live-controls[data-stage=true]{position:absolute;top:58px;left:70px;max-width:calc(100% - 140px)}
+
+.persona-live-active > :not(.persona-live-layer){visibility:hidden}
+
+/* The host itself can carry Voxta's portrait, not only its children. */
+.persona-live-active{background-image:none!important}
+.persona-live-active::before,.persona-live-active::after{visibility:hidden!important}
+
+.persona-live-positioned{position:relative}
+.persona-live-layer,.persona-live-layer canvas{visibility:visible!important}
+
+/* Compositor-only whole-cutout motion, anchored near the feet. No image warping. */
+.persona-live-cutout canvas{transform-origin:50% 92%;animation:persona-live-breathe 5.8s ease-in-out infinite,persona-live-balance 17s ease-in-out infinite;transition:rotate 1.4s ease-in-out}
+.persona-live-cutout[data-mood=sad] canvas{rotate:-.3deg}
+.persona-live-cutout[data-mood=warm] canvas{rotate:.2deg}
+.persona-live-cutout[data-mood=excited] canvas{rotate:.35deg}
+@keyframes persona-live-breathe{0%,100%{scale:1 1}45%{scale:1.001 1.004}}
+@keyframes persona-live-balance{0%,100%{transform:translateX(0) rotate(0deg)}27%{transform:translateX(.15%) rotate(.18deg)}62%{transform:translateX(-.12%) rotate(-.14deg)}83%{transform:translateX(-.04%) rotate(-.04deg)}}
+.persona-live-cutout[data-presence=advanced] canvas{animation:persona-live-presence-breathe 4.8s ease-in-out infinite,persona-live-presence-settle 11s ease-in-out infinite}
+.persona-live-cutout[data-presence=advanced][data-activity=speaking] canvas{animation:persona-live-presence-breathe 3.9s ease-in-out infinite,persona-live-presence-speaking 2.7s ease-in-out infinite}
+@keyframes persona-live-presence-breathe{0%,100%{scale:1 1}42%{scale:1.002 1.007}70%{scale:1.0005 1.003}}
+@keyframes persona-live-presence-settle{0%,100%{transform:translateX(0) translateY(0) rotate(0deg)}23%{transform:translateX(.28%) translateY(-.08%) rotate(.24deg)}51%{transform:translateX(-.18%) translateY(.03%) rotate(-.16deg)}76%{transform:translateX(.08%) translateY(-.04%) rotate(.08deg)}}
+@keyframes persona-live-presence-speaking{0%,100%{transform:translateX(0) translateY(0) rotate(0deg)}30%{transform:translateX(.18%) translateY(-.13%) rotate(.18deg)}57%{transform:translateX(-.13%) translateY(.04%) rotate(-.12deg)}79%{transform:translateX(.08%) translateY(-.07%) rotate(.08deg)}}
+@media(prefers-reduced-motion:reduce){.persona-live-cutout canvas{animation:none;transition:none;rotate:none}}

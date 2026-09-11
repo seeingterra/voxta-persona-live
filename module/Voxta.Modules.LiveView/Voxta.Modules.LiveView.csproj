@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>0.5.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Voxta.Sdk.Modules" Version="1.10.0" />
+    <PackageReference Include="Voxta.Model" Version="1.10.0" />
+    <EmbeddedResource Include="../../addon/voxta-live-view/live-view.js" LogicalName="live-view.js" />
+    <EmbeddedResource Include="../../addon/voxta-live-view/live-view.css" LogicalName="live-view.css" />
+    <EmbeddedResource Include="../../backend/__init__.py" LogicalName="runtime/backend/__init__.py" />
+    <EmbeddedResource Include="../../backend/live_module.py" LogicalName="runtime/backend/live_module.py" />
+    <EmbeddedResource Include="../../backend/voxta.py" LogicalName="runtime/backend/voxta.py" />
+    <EmbeddedResource Include="../../backend/storage.py" LogicalName="runtime/backend/storage.py" />
+    <EmbeddedResource Include="../../backend/hardware.py" LogicalName="runtime/backend/hardware.py" />
+    <EmbeddedResource Include="../../backend/inference.py" LogicalName="runtime/backend/inference.py" />
+    <EmbeddedResource Include="../../backend/live_models.py" LogicalName="runtime/backend/live_models.py" />
+    <EmbeddedResource Include="../../backend/optional_visual.py" LogicalName="runtime/backend/optional_visual.py" />
+    <EmbeddedResource Include="../../backend/live_worker.py" LogicalName="runtime/backend/live_worker.py" />
+    <EmbeddedResource Include="../../backend/live_acceleration.py" LogicalName="runtime/backend/live_acceleration.py" />
+    <EmbeddedResource Include="../../backend/live_composite.py" LogicalName="runtime/backend/live_composite.py" />
+    <EmbeddedResource Include="../../backend/live_motion.py" LogicalName="runtime/backend/live_motion.py" />
+    <EmbeddedResource Include="../../backend/live_landmarks.py" LogicalName="runtime/backend/live_landmarks.py" />
+    <EmbeddedResource Include="../../backend/live_bootstrap.py" LogicalName="runtime/backend/live_bootstrap.py" />
+    <EmbeddedResource Include="../../vendor/liveportrait/src/**/*.py" LogicalName="runtime/vendor/liveportrait/src/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../../vendor/liveportrait/LICENSE" LogicalName="runtime/vendor/liveportrait/LICENSE" />
+  </ItemGroup>
+</Project>

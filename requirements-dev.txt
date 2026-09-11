@@ -1,0 +1,2 @@
+-r module/requirements-live-view.txt
+pytest>=8,<10

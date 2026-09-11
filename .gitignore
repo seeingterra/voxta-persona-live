@@ -1,0 +1,15 @@
+.venv/
+node_modules/
+artifacts/
+/Voxta/
+**/bin/
+**/obj/
+**/__pycache__/
+.pytest_cache/
+.pytest-tmp/
+data/assets/
+data/logs/
+data/tmp/
+data/personas/
+data/revisions/
+data/models/
