@@ -13,6 +13,9 @@
 #persona-live-controls button:hover{background:#3c4941}
 #persona-live-controls button:focus-visible,#persona-live-controls select:focus-visible{outline:2px solid #b8e38b;outline-offset:2px}
 #persona-live-controls span{min-width:0;color:#b8c2bc;font-size:12px;line-height:1.25;overflow-wrap:anywhere}
+#persona-live-loading{display:flex;align-items:center;gap:.4rem}
+.persona-live-loading::before{content:"";width:.55rem;height:.55rem;box-sizing:border-box;border:1.5px solid rgba(184,227,139,.28);border-top-color:#b8e38b;border-radius:50%;animation:persona-live-spin .7s linear infinite;flex:0 0 auto}
+@keyframes persona-live-spin{to{transform:rotate(360deg)}}
 .persona-live-options{display:grid;gap:.45rem;margin:.5rem .05rem .05rem;padding:.55rem .15rem .1rem;border-top:1px solid rgba(255,255,255,.1)}
 .persona-live-options[hidden]{display:none}
 .persona-live-display-toggle{display:flex;align-items:center;gap:.7rem;width:100%;box-sizing:border-box;padding:.6rem .75rem;border:0;border-radius:6px;background:transparent;color:inherit;cursor:pointer;text-align:left;font:inherit}
