@@ -9,6 +9,12 @@ namespace Voxta.Modules.LiveView;
 
 public class LiveViewService(RendererHost renderer, ILogger<LiveViewService> logger) : ServiceBase(logger), IChatAugmentationsService
 {
+    protected override async Task InitializeAsync(CancellationToken cancellationToken)
+    {
+        await base.InitializeAsync(cancellationToken);
+        renderer.Configure(LiveViewConfiguration.Read(ModuleConfiguration));
+        await renderer.PrepareAsync(cancellationToken);
+    }
     public Task<AugmentationPlanItem[]> PlanAsync(IChatAugmentationPlanContext context, CancellationToken cancellationToken)
     {
         var settings=LiveViewConfiguration.Read(ModuleConfiguration);

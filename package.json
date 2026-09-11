@@ -1,6 +1,6 @@
 {
   "name": "voxta-live-view",
-  "version": "0.5.9",
+  "version": "0.5.10",
   "private": true,
   "scripts": {
     "test:browser": "node scripts/browser-live-activation.cjs"

@@ -1,11 +1,13 @@
 const {chromium}=require('playwright');
 const fs=require('node:fs');
 (async()=>{const browser=await chromium.launch({headless:true});try{
-const page=await browser.newPage();let selected=true,block='';let states=0;
-await page.route('**/live-activation-test',r=>r.fulfill({contentType:'text/html',body:'<html><head><style>.stage-view{position:relative;width:480px;height:640px}.avatar-apply{position:absolute;inset:0}</style></head><body><div><div>Display</div><div><button type="button"><span>Animations</span><span role="switch"></span></button></div></div><div class="stage-view"><div class="avatar-apply" style="background-image:url(/api/characters/test/photo.png)"></div></div><script type="module" src="/persona-live-view/api/voxta/addon/live-view.js"></script></body></html>'}));
+const page=await browser.newPage();let selected=true,block='',adapterUnavailable=false;let states=0;
+const shell='<html><head><style>.stage-view{position:relative;width:480px;height:640px}.avatar-apply{position:absolute;inset:0}</style></head><body><div><div>Display</div><div><button type="button"><span>Animations</span><span role="switch"></span></button></div></div><div class="stage-view"><div class="avatar-apply" style="background-image:url(/api/characters/test/photo.png)"></div></div><script type="module" src="/persona-live-view/api/voxta/addon/live-view.js"></script></body></html>';
+await page.route('**/live-activation-test**',r=>r.fulfill({contentType:'text/html',body:shell}));
+await page.route('**/chat/**',r=>r.fulfill({contentType:'text/html',body:shell}));
 await page.route('**/persona-live-view/api/voxta/addon/live-view.js',r=>r.fulfill({contentType:'text/javascript',body:fs.readFileSync('addon/voxta-live-view/live-view.js','utf8')}));
 await page.route('**/persona-live-view/api/voxta/addon/live-view.css',r=>r.fulfill({contentType:'text/css',body:fs.readFileSync('addon/voxta-live-view/live-view.css','utf8')}));
-await page.route('**/persona-live-view/api/voxta/addon/adapter.json',r=>r.fulfill({json:{store:'/test-store.js',audio:'/test-audio.js',notifications:'/test-notifications.js'}}));
+await page.route('**/persona-live-view/api/voxta/addon/adapter.json',r=>adapterUnavailable?r.fulfill({status:503,json:{detail:'Voxta bundle changed'}}):r.fulfill({json:{store:'/test-store.js',audio:'/test-audio.js',notifications:'/test-notifications.js'}}));
 await page.route('**/test-store.js',r=>r.fulfill({contentType:'text/javascript',body:`export const store={getAvatarUrl(){},chat:()=>({sessionId:'11111111-1111-1111-1111-111111111111',chatId:'chat',started:true}),generating:()=>false,speakingMessageId:()=>null,displayMode:()=>window.mode||'chat',setDisplayMode:v=>{window.mode=v}};export const sound={speakerMuted:()=>false};`}));
 await page.route('**/test-audio.js',r=>r.fulfill({contentType:'text/javascript',body:'export const audio=()=>({getAnalyser:()=>Promise.resolve({fftSize:32,getFloatTimeDomainData(samples){(window.audioBuffers??=[]).push(samples);samples.fill(.1)}}),resumeAudioCapabilities:()=>{throw Error("Must not unlock audio")}});'}));
 await page.route('**/test-notifications.js',r=>r.fulfill({contentType:'text/javascript',body:'export const notifications={notify:value=>(window.notifications??=[]).push(value)};'}));
@@ -80,5 +82,6 @@ if(await page.evaluate(()=>window.__personaLiveView.enabled))throw Error('Pause 
 await page.getByRole('button',{name:'Start animation',exact:true}).click();await page.waitForFunction(n=>window.__personaLiveView.frames>n,frames);console.log('PASS resume renders again');
 selected=false;await page.waitForFunction(()=>!window.__personaLiveView.enabled);console.log('PASS deselection stops animation');
 selected=true;block='Voxta cannot start this chat: insufficient GPU memory.';await page.reload();await page.getByRole('button',{name:'Start animation',exact:true}).waitFor();await page.getByRole('button',{name:'Start animation',exact:true}).click();await page.getByText(block,{exact:true}).waitFor();console.log('PASS module startup errors are visible instead of generic launcher instructions');
+adapterUnavailable=true;block='';await page.goto('http://localhost:5384/chat/11111111-1111-1111-1111-111111111111');await page.locator('#persona-live-controls').waitFor();await page.waitForFunction(()=>window.__personaLiveView?.frames>0);console.log('PASS UI remains available when the Voxta adapter manifest changes');
 console.log('Activation browser checks passed; frames were fixtures, no GPU/LLM used.');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});
