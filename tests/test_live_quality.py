@@ -163,6 +163,12 @@ def test_live_renderer_requires_landmark_receipt_and_bounds_hung_renders():
     assert "render timed out after" in inference
 
 
+def test_native_proxy_allows_in_chat_hardware_and_usage_endpoints():
+    startup = (Path(__file__).parents[1] / "module" / "Voxta.Modules.LiveView" / "LiveViewStartup.cs").read_text(encoding="utf-8")
+    assert '"/api/voxta/hardware"' in startup
+    assert '"/api/voxta/usage"' in startup
+
+
 def test_live_view_worker_configures_its_own_liveportrait_import_path():
     worker = (Path(__file__).parents[1] / "backend" / "live_worker.py").read_text(encoding="utf-8")
     assert 'LIVEPORTRAIT_ROOT = ROOT / "vendor" / "liveportrait"' in worker

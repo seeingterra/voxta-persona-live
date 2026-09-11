@@ -93,7 +93,7 @@ public sealed class LiveViewStartup(RendererHost renderer) : IStartupFilter
                 await stream.CopyToAsync(c.Response.Body,c.RequestAborted);return;
             }
             var live=Regex.IsMatch(path,@"^/api/voxta/live/[a-f0-9]{32}$");
-            var allowed=path is "/api/session" or "/api/voxta/status" or "/api/voxta/native-reference" or "/api/voxta/install" or "/api/voxta/install-status" || Regex.IsMatch(path,@"^/api/voxta/matte/[a-f0-9]{32}$");
+            var allowed=path is "/api/session" or "/api/voxta/status" or "/api/voxta/hardware" or "/api/voxta/usage" or "/api/voxta/native-reference" or "/api/voxta/install" or "/api/voxta/install-status" || Regex.IsMatch(path,@"^/api/voxta/matte/[a-f0-9]{32}$");
             if(!live && !allowed){c.Response.StatusCode=404;return;}
             if(c.Request.ContentLength>36*1024*1024){c.Response.StatusCode=413;return;}
             if(c.Request.Method is not ("GET" or "POST")){c.Response.StatusCode=405;return;}

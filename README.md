@@ -36,7 +36,7 @@ The browser regression uses mocked frames and no GPU/LLM. Native tests use a tem
 Close Voxta first; the install task does not automatically stop it.
 
 ```powershell
-Copy-Item .\artifacts\PersonaLiveView-0.5.6\Voxta.Modules.LiveView.dll 'J:\CODEX\compchat\Voxta\Modules\' -Force
+Copy-Item .\artifacts\PersonaLiveView-0.5.7\Voxta.Modules.LiveView.dll 'J:\CODEX\compchat\Voxta\Modules\' -Force
 ```
 
 Restart Voxta and refresh the browser after updates. The module detects Voxta's managed Python automatically; no Python path is exposed to users. On the first Start animation action, Voxta shows a native setup notification and the DLL extracts module source to `Data/LiveView`, installs module-only dependencies to `Data/Python/modules/PersonaLiveView/site-packages`, and downloads model files to `Data/LiveView/data/models`.
